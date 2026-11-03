@@ -1,0 +1,1067 @@
+<title>Raag Sound Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Tiro+Devanagari+Hindi&display=swap">
+<style>
+/* Layout: a two-mode instrument bench. "View everything" = source rail + catalogue; "Work on the design" = controls beside a phone preview of the app. */
+:root {
+  --bg:#F1F3EF; --surface:#FFFFFF; --sunk:#E6E9E3; --ink:#18211D; --muted:#5A6862; --line:#D3D9D1;
+  --accent:#0D6863; --accent-ink:#FFFFFF; --accent-soft:#D9ECE9; --brass:#9A6A14; --brass-soft:#F3E7CF;
+  --ok:#2C7A4C; --warn:#9A6200; --no:#B0382C; --bezel:#1F2925;
+  --f-display:"Tiro Devanagari Hindi", "Noto Serif Devanagari", Georgia, serif;
+  --f-body:"Hind", "Noto Sans", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#0F1412; --surface:#171F1B; --sunk:#0B100E; --ink:#E3EAE5; --muted:#92A299; --line:#28332E;
+  --accent:#4DB5AB; --accent-ink:#04211E; --accent-soft:#16302D; --brass:#D9A441; --brass-soft:#2E2614;
+  --ok:#5CC28A; --warn:#E0A53A; --no:#EF7A6D; --bezel:#050807; color-scheme:dark; } }
+:root[data-theme="dark"] {
+  --bg:#0F1412; --surface:#171F1B; --sunk:#0B100E; --ink:#E3EAE5; --muted:#92A299; --line:#28332E;
+  --accent:#4DB5AB; --accent-ink:#04211E; --accent-soft:#16302D; --brass:#D9A441; --brass-soft:#2E2614;
+  --ok:#5CC28A; --warn:#E0A53A; --no:#EF7A6D; --bezel:#050807; color-scheme:dark; }
+
+* { box-sizing:border-box; }
+body { background:var(--bg); color:var(--ink); font:16px/1.55 var(--f-body); }
+body.np-on { padding-bottom:84px; }
+h1,h2,h3,h4 { margin:0; text-wrap:balance; line-height:1.2; }
+h2 { font-size:22px; font-weight:600; } h3 { font-size:18px; font-weight:600; } h4 { font-size:13px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+p { margin:0; }
+a { color:var(--accent); }
+code, .mono { font-family:var(--f-mono); font-size:13px; }
+button { font:inherit; color:inherit; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.muted { color:var(--muted); }
+.small { font-size:14px; }
+.deva { font-family:var(--f-display); }
+.wrap { max-width:1240px; margin:0 auto; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+
+body::before { content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:10; background:var(--surface); }
+.top { position:sticky; top:env(safe-area-inset-top, 0px); z-index:5; background:var(--surface); border-bottom:1px solid var(--line); }
+.top-in { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding-block:12px; }
+.brand { display:flex; align-items:center; gap:12px; min-width:0; }
+.brand .mark { font-family:var(--f-display); font-size:30px; line-height:1; color:var(--accent); }
+.brand b { display:block; font-size:18px; font-weight:600; }
+.brand small { display:block; color:var(--muted); font-size:13px; }
+.tabs { display:flex; background:var(--sunk); border-radius:999px; padding:4px; gap:4px; }
+.tabs a { text-decoration:none; color:var(--muted); padding:8px 16px; border-radius:999px; font-weight:500; font-size:15px; white-space:nowrap; }
+.tabs a[aria-current="page"] { background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.12); }
+
+.view { padding-block:24px 48px; }
+.note { display:flex; gap:12px; align-items:flex-start; background:var(--brass-soft); border:1px solid color-mix(in srgb, var(--brass) 30%, transparent); border-radius:var(--r); padding:12px 14px; font-size:14px; margin-bottom:20px; }
+.note b { color:var(--brass); }
+
+/* buttons & chips */
+.btn { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:6px 12px; cursor:pointer; font-size:14px; font-weight:500; white-space:nowrap; text-decoration:none; color:var(--ink); }
+.btn:hover { border-color:var(--accent); }
+.btn.primary { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+.btn.sm { padding:3px 9px; font-size:13px; }
+.btn svg { width:12px; height:12px; fill:currentColor; flex:none; }
+.btn.playing { background:var(--accent-soft); border-color:var(--accent); }
+.chip { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:500; padding:1px 8px; border-radius:999px; background:var(--sunk); color:var(--muted); white-space:nowrap; }
+.chip.code { font-family:var(--f-mono); background:var(--accent-soft); color:var(--accent); }
+.st { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:2px 8px; border-radius:6px; white-space:nowrap; }
+.st::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+.st.ok { color:var(--ok); background:color-mix(in srgb, var(--ok) 12%, transparent); }
+.st.check { color:var(--warn); background:color-mix(in srgb, var(--warn) 14%, transparent); }
+.st.no { color:var(--no); background:color-mix(in srgb, var(--no) 12%, transparent); }
+
+/* library */
+.lib { display:grid; grid-template-columns:250px minmax(0,1fr); gap:24px; align-items:start; }
+.rail { position:sticky; top:calc(env(safe-area-inset-top, 0px) + 84px); display:flex; flex-direction:column; gap:2px; }
+.rail button { text-align:left; border:0; background:none; border-radius:8px; padding:8px 10px; cursor:pointer; display:flex; flex-direction:column; gap:1px; }
+.rail button:hover { background:var(--sunk); }
+.rail button[aria-current="true"] { background:var(--surface); box-shadow:inset 3px 0 0 var(--accent); }
+.rail .rc { font-family:var(--f-mono); font-size:13px; color:var(--accent); }
+.rail .rn { font-size:13px; color:var(--muted); }
+.rail .all { font-weight:600; font-size:15px; margin-bottom:6px; border:1px solid var(--line); background:var(--surface); }
+.rail hr { border:0; border-top:1px solid var(--line); margin:6px 0; }
+
+.src-head { display:flex; flex-wrap:wrap; gap:12px 20px; align-items:flex-end; justify-content:space-between; padding-bottom:16px; border-bottom:1px solid var(--line); margin-bottom:20px; }
+.src-head .t { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.src-head .t .chip.code { align-self:flex-start; font-size:13px; }
+.src-head h2 { font-size:28px; }
+.facts { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; margin-bottom:20px; }
+.facts > div { background:var(--surface); padding:10px 12px; min-width:0; }
+.facts dt { font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+.facts dd { margin:2px 0 0; font-size:14px; overflow-wrap:anywhere; }
+.codebox { position:relative; background:var(--sunk); border:1px solid var(--line); border-radius:var(--r); padding:12px 14px; padding-right:72px; overflow-x:auto; margin-bottom:20px; }
+.codebox pre { margin:0; font-family:var(--f-mono); font-size:13px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.codebox .btn { position:absolute; top:8px; right:8px; }
+.group { margin-bottom:24px; }
+.group > h4 { margin-bottom:10px; }
+.rows { border:1px solid var(--line); border-radius:var(--r); background:var(--surface); overflow:hidden; }
+.row { display:flex; align-items:center; gap:10px; padding:9px 12px; border-top:1px solid var(--line); flex-wrap:wrap; }
+.row:first-child { border-top:0; }
+.row .q { font-family:var(--f-mono); font-size:13px; flex:1 1 180px; min-width:0; overflow-wrap:anywhere; }
+.row .d { color:var(--muted); font-size:13px; flex:2 1 220px; min-width:0; }
+.row .acts { display:flex; gap:6px; flex-wrap:wrap; }
+.keys { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:6px; }
+.keys button { border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:10px 0; cursor:pointer; font-weight:600; font-size:15px; display:flex; flex-direction:column; align-items:center; gap:0; }
+.keys button small { font-weight:400; color:var(--muted); font-size:11px; }
+.keys button:hover, .pads button:hover { border-color:var(--accent); }
+.keys button.playing, .pads button.playing { background:var(--accent-soft); border-color:var(--accent); }
+.pads { display:grid; grid-template-columns:repeat(auto-fill, minmax(88px,1fr)); gap:8px; }
+.pads button { border:1px solid var(--line); background:var(--surface); border-radius:var(--r); padding:14px 6px 10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; }
+.pads b { font-size:18px; font-weight:600; }
+.pads .deva { font-size:15px; color:var(--brass); }
+.pads small { color:var(--muted); font-size:11px; text-align:center; }
+.pads button.hit { transform:scale(.96); }
+
+/* swaras */
+.seq { display:flex; flex-wrap:wrap; gap:2px 4px; align-items:baseline; font-size:15px; }
+.sw { position:relative; display:inline-block; padding:3px 4px 5px; border-radius:5px; font-weight:500; }
+.sw.k { text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:1.5px; }
+.sw.tv::after { content:""; position:absolute; top:-1px; left:50%; width:1.5px; height:7px; background:currentColor; }
+.sw.hi::before { content:""; position:absolute; top:-2px; left:50%; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:currentColor; }
+.sw.tv.hi::before { left:calc(50% + 6px); }
+.sw.lo::before { content:""; position:absolute; bottom:-5px; left:50%; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:currentColor; }
+.sw.now { background:var(--accent); color:var(--accent-ink); }
+.rest { color:var(--muted); padding:0 2px; }
+.legend { font-size:12px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 14px; }
+
+/* raag explorer */
+.rx { display:grid; grid-template-columns:260px minmax(0,1fr); gap:16px; align-items:start; }
+.rx-list { border:1px solid var(--line); border-radius:var(--r); background:var(--surface); max-height:640px; overflow:auto; }
+.rx-list .th { position:sticky; top:0; background:var(--sunk); padding:6px 12px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.rx-list button { display:flex; width:100%; justify-content:space-between; gap:8px; border:0; border-top:1px solid var(--line); background:none; text-align:left; padding:8px 12px; cursor:pointer; }
+.rx-list button[aria-current="true"] { background:var(--accent-soft); }
+.rx-list button .deva { color:var(--brass); }
+.filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+input[type=search], select, input[type=text] { font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--ink); min-width:0; }
+.raag { background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:18px; display:flex; flex-direction:column; gap:14px; min-width:0; }
+.raag-h { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.raag-h .deva { font-size:40px; line-height:1; color:var(--brass); }
+.raag-h h3 { font-size:22px; }
+.kv { display:grid; gap:10px; margin:0; }
+.kv > div { display:grid; grid-template-columns:72px minmax(0,1fr) auto; gap:10px; align-items:center; }
+.kv dt { font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.kv dd { margin:0; min-width:0; }
+.tags { display:flex; flex-wrap:wrap; gap:6px; }
+.tag { font-size:13px; padding:3px 10px; border:1px solid var(--line); border-radius:999px; }
+.tag b { font-weight:600; }
+.tbl-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { text-align:left; padding:8px 10px; border-top:1px solid var(--line); vertical-align:middle; }
+th { background:var(--sunk); font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); border-top:0; white-space:nowrap; }
+td .seq { font-size:14px; flex-wrap:nowrap; }
+
+/* all-at-once grid */
+.allgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px,1fr)); gap:16px; }
+.mini { background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0; }
+.mini-h { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.mini-h h3 { font-size:17px; }
+.mini .keys { grid-template-columns:repeat(6,minmax(0,1fr)); }
+.mini .keys button { padding:6px 0; font-size:13px; }
+.mini .pads { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.mini .pads button { padding:8px 4px 6px; }
+.mini .pads b { font-size:15px; }
+.mini .foot { margin-top:auto; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+
+/* studio */
+.studio { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:28px; align-items:start; }
+.panel { background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px; display:flex; flex-direction:column; gap:14px; min-width:0; }
+.controls { display:flex; flex-direction:column; gap:16px; min-width:0; }
+.vgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px; }
+.vcard { text-align:left; border:1px solid var(--line); background:var(--bg); border-radius:var(--r); padding:12px; cursor:pointer; display:flex; flex-direction:column; gap:6px; }
+.vcard:hover { border-color:var(--accent); }
+.vcard[aria-pressed="true"] { border-color:var(--accent); background:var(--accent-soft); }
+.vcard b { font-size:15px; }
+.vcard p { font-size:13px; color:var(--muted); }
+.vcard .tags { gap:4px; }
+.vcard .x { align-self:flex-end; font-size:12px; color:var(--muted); border:0; background:none; cursor:pointer; text-decoration:underline; padding:0; }
+.field { display:grid; grid-template-columns:130px minmax(0,1fr); gap:10px; align-items:center; }
+.field > label { font-size:14px; font-weight:500; }
+.field .help { grid-column:2; font-size:12px; color:var(--muted); margin-top:-6px; }
+.seg { display:flex; flex-wrap:wrap; gap:4px; }
+.seg button { border:1px solid var(--line); background:var(--surface); border-radius:7px; padding:4px 9px; cursor:pointer; font-size:14px; min-width:38px; }
+.seg button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+.rng { display:flex; gap:10px; align-items:center; }
+.rng input { flex:1; accent-color:var(--accent); min-width:0; }
+.rng output { font-variant-numeric:tabular-nums; font-size:14px; min-width:92px; text-align:right; color:var(--muted); }
+.srcsel { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:10px; }
+.srcsel label { display:flex; flex-direction:column; gap:4px; font-size:13px; font-weight:600; color:var(--muted); }
+.srcsel select { width:100%; }
+.srcsel .st { align-self:flex-start; }
+
+.preview { position:sticky; top:calc(env(safe-area-inset-top, 0px) + 84px); display:flex; flex-direction:column; gap:14px; align-items:center; }
+.phone { width:100%; max-width:360px; background:var(--bezel); border-radius:42px; padding:12px; box-shadow:0 18px 40px -18px rgba(0,0,0,.45); }
+.screen { background:var(--bg); border-radius:32px; overflow:hidden; display:flex; flex-direction:column; }
+.sbar { display:flex; justify-content:space-between; padding:10px 22px 4px; font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
+.app-h { padding:6px 18px 10px; display:flex; justify-content:space-between; align-items:center; }
+.app-h b { font-size:15px; }
+.app-raag { margin:0 12px; background:var(--surface); border-radius:18px; padding:14px; display:flex; flex-direction:column; gap:8px; }
+.app-raag .top2 { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+.app-raag .deva { font-size:30px; line-height:1; color:var(--brass); }
+.app-raag .en { font-weight:600; }
+.app-raag .seq { font-size:13px; gap:0 2px; }
+.app-raag .sw { padding:2px 2px 4px; }
+.app-raag .lbl { font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+.chakra { display:block; width:100%; max-width:250px; margin:4px auto 0; }
+.chakra .dot { fill:var(--surface); stroke:var(--line); stroke-width:1.5; transition:fill .08s; }
+.chakra .dot.sam { stroke:var(--brass); stroke-width:2.5; }
+.chakra .dot.khali { stroke-dasharray:3 2; }
+.chakra .dot.on { fill:var(--accent); stroke:var(--accent); }
+.chakra text { fill:var(--ink); font-family:var(--f-body); }
+.chakra .bl { font-size:10px; fill:var(--muted); }
+.chakra .bl.on { fill:var(--accent); font-weight:600; }
+.chakra .mk { font-size:11px; font-weight:600; fill:var(--brass); }
+.chakra .ring { fill:none; stroke:var(--line); stroke-width:1; }
+.strings { display:flex; justify-content:center; gap:22px; padding:6px 0 2px; }
+.string { display:flex; flex-direction:column; align-items:center; gap:4px; font-size:11px; color:var(--muted); }
+.string i { display:block; width:2px; height:46px; background:var(--line); border-radius:2px; transform-origin:50% 50%; }
+.string.ring i { background:var(--brass); animation:wob .5s ease-out; }
+.string.ring { color:var(--brass); }
+@keyframes wob { 0%{transform:scaleX(3)} 30%{transform:translateX(1.5px) scaleX(2)} 60%{transform:translateX(-1px)} 100%{transform:none} }
+.app-ctrl { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px 4px; }
+.playbig { width:56px; height:56px; border-radius:50%; border:0; background:var(--accent); color:var(--accent-ink); cursor:pointer; display:grid; place-items:center; flex:none; }
+.playbig svg { width:22px; height:22px; fill:currentColor; }
+.app-ctrl .meta { font-size:12px; color:var(--muted); line-height:1.35; text-align:center; flex:1; }
+.app-ctrl .meta b { color:var(--ink); font-size:14px; display:block; }
+.app-cred { padding:8px 16px 18px; font-size:10.5px; color:var(--muted); line-height:1.4; text-align:center; }
+.bpmtoggle { border:1px solid var(--line); background:var(--surface); border-radius:999px; width:42px; height:42px; cursor:pointer; font-size:12px; font-weight:600; flex:none; }
+.uses { width:100%; max-width:360px; }
+.uses .row { padding:8px 12px; }
+.uses .row .d { flex:1 1 100%; }
+
+/* now playing */
+#np { position:fixed; left:0; right:0; bottom:0; z-index:20; background:var(--surface); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom, 0px); box-shadow:0 -6px 20px -12px rgba(0,0,0,.3); }
+#np .in { display:flex; align-items:center; gap:12px; padding-block:10px; }
+.np-dot { width:10px; height:10px; border-radius:50%; background:var(--accent); flex:none; animation:pulse 1.4s infinite; }
+@keyframes pulse { 50% { opacity:.35; } }
+.np-t { flex:1; min-width:0; }
+.np-t b { display:block; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.np-t small { display:block; font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.np-bol { font-size:20px; font-weight:600; color:var(--accent); min-width:64px; text-align:center; }
+.toast { position:fixed; left:50%; bottom:100px; transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:8px; font-size:14px; z-index:30; }
+
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:40; display:grid; place-items:center; padding:16px; }
+.overlay .raag { max-width:640px; width:100%; max-height:calc(100% - 32px); overflow:auto; }
+
+@media (max-width: 980px) {
+  .studio { grid-template-columns:minmax(0,1fr); }
+  .preview { position:static; order:-1; }
+}
+@media (max-width: 860px) {
+  .lib { grid-template-columns:minmax(0,1fr); }
+  .rail { position:static; flex-direction:row; flex-wrap:wrap; gap:6px; }
+  .rail hr { display:none; }
+  .rail button { border:1px solid var(--line); background:var(--surface); padding:5px 10px; }
+  .rail .rn { display:none; }
+  .rail .all { margin:0; font-size:13px; }
+  .rail button[aria-current="true"] { box-shadow:none; background:var(--accent-soft); border-color:var(--accent); }
+  .rx { grid-template-columns:minmax(0,1fr); }
+  .rx-list { max-height:260px; }
+  .allgrid { grid-template-columns:minmax(0,1fr); }
+}
+@media (max-width: 520px) {
+  .keys { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .field { grid-template-columns:minmax(0,1fr); gap:6px; }
+  .field .help { grid-column:1; margin-top:0; }
+  .kv > div { grid-template-columns:minmax(0,1fr) auto; }
+  .kv dt { grid-column:1 / -1; }
+  .tabs a { padding:7px 12px; font-size:14px; }
+  .src-head h2 { font-size:24px; }
+  .np-bol { display:none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .string.ring i { animation:none; }
+  .np-dot { animation:none; }
+  .chakra .dot { transition:none; }
+}
+</style>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">स्वर</span>
+      <div><b>Raag Sound Studio</b><small>8 sources · tanpura, tabla and raag details</small></div>
+    </div>
+    <nav class="tabs" aria-label="Mode">
+      <a href="#library" id="tabLibrary">View everything</a>
+      <a href="#studio" id="tabStudio">Work on the design</a>
+    </nav>
+  </div>
+</header>
+
+<section class="view" id="viewLibrary">
+  <div class="wrap">
+    <div class="note" role="note">
+      <div><b>About the sounds:</b> every sound on this page is played live in your browser as a stand-in, so it works for anyone you share it with. Each one is labelled with the exact API query that brings in the real recording in your app. Use <i>Open results</i> to hear the real catalogue on each site. Raag details are a built-in reference using the same fields these APIs return.</div>
+    </div>
+    <div class="lib">
+      <nav class="rail" id="rail" aria-label="Sources"></nav>
+      <div id="libMain" style="min-width:0"></div>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="viewStudio" hidden>
+  <div class="wrap">
+    <div class="studio">
+      <div class="controls" id="controls"></div>
+      <div class="preview" id="preview"></div>
+    </div>
+  </div>
+</section>
+
+<div id="np" hidden>
+  <div class="wrap in">
+    <span class="np-dot" aria-hidden="true"></span>
+    <div class="np-t"><b id="npTitle"></b><small id="npSub"></small></div>
+    <span class="np-bol" id="npBol" aria-hidden="true"></span>
+    <button class="btn primary" id="npStop">Stop</button>
+  </div>
+</div>
+
+<script>
+/* ============================== DATA ============================== */
+const KEYS = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const saFreq = k => 130.81 * Math.pow(2, KEYS.indexOf(k) / 12); // Sa in the 3rd octave
+
+const SW = { S:["Sa",1], r:["Re",16/15], R:["Re",9/8], g:["Ga",6/5], G:["Ga",5/4], m:["Ma",4/3], M:["Ma",45/32],
+             P:["Pa",3/2], d:["Dha",8/5], D:["Dha",5/3], n:["Ni",9/5], N:["Ni",15/8] };
+
+const THAATS = {
+  Bilawal:"S R G m P D N", Kalyan:"S R G M P D N", Khamaj:"S R G m P D n", Kafi:"S R g m P D n", Asavari:"S R g m P d n",
+  Bhairavi:"S r g m P d n", Bhairav:"S r G m P d N", Marwa:"S r G M P D N", Poorvi:"S r G M P d N", Todi:"S r g M P d N"
+};
+
+// [id, name, devanagari, thaat, aaroh, avaroh, pakad, vadi, samvadi, time label, [startHour, endHour], jati, varjit, mood, tanpura first string, note]
+const RAAG_ROWS = [
+ ["yaman","Yaman","यमन","Kalyan",".N R G M D N S'","S' N D P M G R S",".N R G R , P R , .N R S","G","N","First prahar of night · 6–9 pm",[18,21],"Sampurna–Sampurna","None","Serene, devotional","P","Tivra Ma throughout. Usually the first raag a student learns."],
+ ["bhupali","Bhupali","भूपाली","Kalyan","S R G P D S'","S' D P G R S","G R S .D S R G , P G , D P G R S","G","D","First prahar of night · 6–9 pm",[18,21],"Audav–Audav","Ma, Ni","Calm, devotional","P","Pentatonic. Shares its notes with Carnatic Mohanam."],
+ ["hamsadhwani","Hamsadhwani","हंसध्वनि","Bilawal",".N S R G P N S'","S' N P G R S",".N S R G P , N P G R S","S","P","First prahar of night · 6–9 pm",[18,21],"Audav–Audav","Ma, Dha","Bright, auspicious","P","Came from Carnatic music. Often opens a concert."],
+ ["kedar","Kedar","केदार","Kalyan","S m , m P , D P , N D S'","S' N D P , M P D P m , R S","S m , m P , D P m , P m R S","m","S","First prahar of night · 6–9 pm",[18,21],"Audav–Shadav (vakra)","Ga, Re in aaroh","Joyful, devotional","P","Leaps from Sa straight to Ma. Tivra Ma appears only in M P D P."],
+ ["bihag","Bihag","बिहाग","Bilawal",".N S G m P N S'","S' N D P M P G m G R S",".N S G m P , M P G m G , R S","G","N","Second prahar of night · 9 pm–12 am",[21,24],"Audav–Sampurna","Re, Dha in aaroh","Romantic","P","Shuddha Ma leads. Tivra Ma only in the turn M P G m G."],
+ ["desh","Desh","देस","Khamaj","S R m P N S'","S' n D P , m G R , G .N S","R m P N S' , n D P , m G R G .N S","R","P","Second prahar of night · 9 pm–12 am",[21,24],"Audav–Sampurna","Ga, Dha in aaroh","Monsoon, romance","P","Shuddha Ni going up, komal Ni coming down."],
+ ["khamaj","Khamaj","खमाज","Khamaj","S G m P D N S'","S' n D P m G R S","n D m P D , m G R S","G","N","Second prahar of night · 9 pm–12 am",[21,24],"Shadav–Sampurna","Re in aaroh","Romantic, light","P","The home of many thumris and dadras."],
+ ["kafi","Kafi","काफ़ी","Kafi","S R g m P D n S'","S' n D P m g R S","S R g m P , m g R , n D P , m g R S","P","S","Late night; also Holi songs in spring",[21,24],"Sampurna–Sampurna","None","Playful, light","P","The parent scale of many folk and semi-classical songs."],
+ ["bageshree","Bageshree","बागेश्री","Kafi",".n S g m D n S'","S' n D , m P D m g , R S",".n .D S , m g , m D n D , m g R S","m","S","Second prahar of night · 9 pm–12 am",[21,24],"Audav–Sampurna","Re, Pa in aaroh","Longing (viraha)","m","Pa is touched only lightly while descending."],
+ ["darbari","Darbari Kanada","दरबारी कान्हड़ा","Asavari","S R g , R S , m P d n S'","S' d n P , m P g m R S","g m R S , .d .n S R S","R","P","Midnight · 12–3 am",[0,3],"Sampurna–Shadav (vakra)","None","Grave, majestic","P","Komal Ga and Dha are sung with a slow, heavy andolan."],
+ ["malkauns","Malkauns","मालकौंस","Bhairavi","S g m d n S'","S' n d m g S","m g m d n d m , g m g S","m","S","Third prahar of night · 12–3 am",[0,3],"Audav–Audav","Re, Pa","Meditative, deep","m","No Pa, so the tanpura's first string is tuned to Ma."],
+ ["lalit","Lalit","ललित","Marwa",".N r G m , M m G , M d N S'","S' N d M d , m M m G , r S",".N r G m , d M m G , M G r S","m","S","Before dawn · 4–6 am",[4,6],"Shadav–Shadav","Pa","Contemplative","m","Both Ma sit side by side. No Pa."],
+ ["bhairav","Bhairav","भैरव","Bhairav","S r G m P d N S'","S' N d P m G r S","G m d P , G m r S","d","r","Dawn · 4–7 am",[4,7],"Sampurna–Sampurna","None","Grave, devotional","P","Komal Re and Dha are sung with a slow andolan."],
+ ["ahirbhairav","Ahir Bhairav","अहीर भैरव","Bhairav","S r G m P D n S'","S' n D P m G r S","G m r S , .n .D .n r S","m","S","Early morning · 6–9 am",[6,9],"Sampurna–Sampurna","None","Calm, devotional","P","Bhairav in the lower half, Kafi in the upper half."],
+ ["bhairavi","Bhairavi","भैरवी","Bhairavi","S r g m P d n S'","S' n d P m g r S","m g r g , S r S , .d .n S","m","S","Morning; also closes a concert",[6,9],"Sampurna–Sampurna","None","Compassion, devotion","P","All four komal swaras. Singers often borrow other swaras freely."],
+ ["todi","Miyan ki Todi","मियाँ की तोड़ी","Todi","S r g M d N S'","S' N d P M g r S",".d .N S r g , r g r S , M d N S'","d","g","Late morning · 9 am–12 pm",[9,12],"Shadav–Sampurna","Pa in aaroh","Tender, pleading","P","Pa is skipped going up and barely touched coming down."],
+ ["asavari","Asavari","आसावरी","Asavari","S R m P d S'","S' n d P m g R S","R m P , n d P , d m P g R S","d","g","Late morning · 9 am–12 pm",[9,12],"Audav–Sampurna","Ga, Ni in aaroh","Renunciation, pathos","P","Its scale is the parent of Jaunpuri and Darbari."],
+ ["jaunpuri","Jaunpuri","जौनपुरी","Asavari","S R m P d n S'","S' n d P m g R S","m P d n d P , m P g R S","d","g","Late morning · 9 am–12 pm",[9,12],"Shadav–Sampurna","Ga in aaroh","Serious, earnest","P","Close to Asavari, but komal Ni is used going up."],
+ ["brindavani","Brindavani Sarang","वृन्दावनी सारंग","Kafi",".N S R m P N S'","S' n P m R S",".N S R m R , P m R , n P m R S","R","P","Midday · 12–3 pm",[12,15],"Audav–Audav","Ga, Dha","Bright, joyful","P","Shuddha Ni going up, komal Ni coming down."],
+ ["bhimpalasi","Bhimpalasi","भीमपलासी","Kafi",".n S g m P n S'","S' n D P m g R S",".n S m , m g P m , g m g R S","m","S","Afternoon · 12–3 pm",[12,15],"Audav–Sampurna","Re, Dha in aaroh","Yearning, tender","P","Rests often on Ma and komal Ga."],
+ ["multani","Multani","मुलतानी","Todi",".N S g M P N S'","S' N d P M g r S",".N S M g , M P g , M g r S","P","S","Late afternoon · 3–6 pm",[15,18],"Audav–Sampurna","Re, Dha in aaroh","Intense, reflective","P","Same scale as Todi but a completely different shape."],
+ ["marwa","Marwa","मारवा","Marwa",".N r G M D N r' S'","r' N D M G r S",".D .N r S , .N r G M D , M G r","r","D","Sunset · 4–7 pm",[16,19],"Shadav–Shadav","Pa","Restless, longing at dusk","N","No Pa and a weak Sa. The tanpura is tuned to Ni."],
+ ["puriyadhanashree","Puriya Dhanashree","पूरिया धनाश्री","Poorvi",".N r G M P d N S'","S' N d P M G r S",".N r G M P , d P M G , M r G r S","P","r","Sunset · 4–7 pm",[16,19],"Sampurna–Sampurna","None","Devotional, twilight","P","Komal Re and Dha with tivra Ma give the dusk colour."]
+];
+const RAAGS = RAAG_ROWS.map(r => ({ id:r[0], name:r[1], deva:r[2], thaat:r[3], aaroh:r[4], avaroh:r[5], pakad:r[6], vadi:r[7], samvadi:r[8],
+  time:r[9], hours:r[10], jati:r[11], varjit:r[12], mood:r[13], tanpura:r[14], note:r[15] }));
+const RAAG = Object.fromEntries(RAAGS.map(r => [r.id, r]));
+
+const TAALS = {
+  teentaal:{ name:"Teentaal", deva:"तीनताल", vibhag:[4,4,4,4], marks:["X","2","0","3"], beats:"Dha Dhin Dhin Dha Dha Dhin Dhin Dha Dha Tin Tin Ta Ta Dhin Dhin Dha", use:"The most common taal. Khayal, gats, tabla solos." },
+  ektaal:{ name:"Ektaal", deva:"एकताल", vibhag:[2,2,2,2,2,2], marks:["X","0","2","0","3","4"], beats:"Dhin Dhin DhaGe=Dha+Ge TiRaKiTa=Ti+Ra+Ki+Te Tu Na Kat Ta DhaGe=Dha+Ge TiRaKiTa=Ti+Ra+Ki+Te Dhin Na", use:"Slow (vilambit) khayal." },
+  jhaptaal:{ name:"Jhaptaal", deva:"झपताल", vibhag:[2,3,2,3], marks:["X","2","0","3"], beats:"Dhi Na Dhi Dhi Na Ti=Tin Na Dhi Dhi Na", use:"Khayal and bhajans. A lilting 2 + 3 feel." },
+  rupak:{ name:"Rupak", deva:"रूपक", vibhag:[3,2,2], marks:["0","1","2"], beats:"Tin Tin Na Dhi Na Dhi Na", use:"Sam falls on khali. Bhajans and light classical." },
+  keherwa:{ name:"Keherwa", deva:"कहरवा", vibhag:[4,4], marks:["X","0"], beats:"Dha Ge Na Ti Na Ke Dhi Na", use:"Bhajans, ghazals and film songs." },
+  dadra:{ name:"Dadra", deva:"दादरा", vibhag:[3,3], marks:["X","0"], beats:"Dha Dhi Na Dha Ti Na", use:"Dadra, ghazal and light classical." }
+};
+for (const [id, t] of Object.entries(TAALS)) {
+  t.id = id;
+  t.beats = t.beats.split(" ").map(tok => { const [label, b] = tok.split("="); return { label, bols:(b || label).split("+") }; });
+  t.matras = t.beats.length;
+  t.markAt = {}; let i = 0; t.vibhag.forEach((n, v) => { t.markAt[i] = t.marks[v]; i += n; });
+}
+
+// Bol -> strokes (dayan: na, tin, tun, te · bayan: ge, ke)
+const BOL = { Dha:["ge","na"], Dhin:["ge","tin"], Dhi:["ge","tin"], Na:["na"], Ta:["na"], Tin:["tin"], Ti:["te"], Te:["te"], Ra:["te"],
+              Tu:["tun"], Tun:["tun"], Ge:["ge"], Ke:["ke"], Ka:["ke"], Kat:["ke"], Ki:["ke"] };
+const BOL_PADS = [
+  ["Dha","धा","Ge + Na together"], ["Dhin","धिं","Ge + Tin together"], ["Na","ना","Dayan rim, ringing"], ["Tin","तिं","Dayan, open ring"],
+  ["Tun","तुन","Dayan centre, deep"], ["Te","ते","Dayan, damped"], ["Ge","गे","Bayan, open with glide"], ["Ke","के","Bayan, flat slap"]
+];
+
+const ST = { ok:"Commercial OK", check:"Check before shipping", no:"Not for commercial use" };
+
+const SOURCES = [
+ { id:"freesound", code:"@freesound", name:"Freesound", by:"Music Technology Group, Universitat Pompeu Fabra", roles:["tanpura","tabla"],
+   gives:"Thousands of user recordings: tanpura drones in every key, tabla thekas and single bols", access:"Free API key · env FREESOUND_API_KEY",
+   licence:"Per sound: CC0, CC BY or CC BY-NC", limits:"About 60 requests/min, 2,000/day", status:"ok", statusNote:"Filter to CC0 or CC BY and credit uploaders",
+   site:"https://freesound.org", docs:"https://freesound.org/docs/api/",
+   request:"GET https://freesound.org/apiv2/search/text/\n  ?query=tanpura C#\n  &filter=duration:[30 TO *] license:\"Creative Commons 0\"\n  &fields=id,name,username,license,duration,tags,previews\n  &token=$FREESOUND_API_KEY",
+   search:q => "https://freesound.org/search/?q=" + encodeURIComponent(q) },
+ { id:"dunya", code:"@dunya", name:"Dunya (CompMusic)", by:"CompMusic project, Universitat Pompeu Fabra", roles:["raag","recordings"],
+   gives:"Official catalogue: 195 raags, 26 taals, layas, forms, 363 artists, 1,124 recordings (305 hours)", access:"Free account token · env DUNYA_TOKEN",
+   licence:"Metadata open to any token. Most audio restricted to research", limits:"Not published", status:"check", statusNote:"Metadata is fine to read. Audio needs approval",
+   site:"https://dunya.compmusic.upf.edu", docs:"https://dunya.compmusic.upf.edu/docs/hindustani.html",
+   request:"GET https://dunya.compmusic.upf.edu/api/hindustani/raag/\nAuthorization: Token $DUNYA_TOKEN",
+   search:() => "https://dunya.compmusic.upf.edu" },
+ { id:"saraga", code:"@saraga", name:"Saraga datasets", by:"MTG, Universitat Pompeu Fabra · on Zenodo", roles:["recordings","annotations"],
+   gives:"About 96 hours of Hindustani and Carnatic concerts, annotated with tonic (Sa), pitch, taal cycles and sections", access:"No key · Python mirdata package",
+   licence:"CC BY-NC 4.0", limits:"Bulk download (Hindustani zip about 4 GB)", status:"no", statusNote:"Non-commercial only. Great for training raag or Sa detection",
+   site:"https://zenodo.org/records/4301737", docs:"https://mirdata.readthedocs.io",
+   request:"pip install mirdata\n\nimport mirdata\nsaraga = mirdata.initialize(\"saraga_hindustani\")\nsaraga.download()\ntrack = saraga.choice_track()\nprint(track.tonic, track.raags, track.tempo)",
+   search:() => "https://zenodo.org/records/4301737" },
+ { id:"tabla-strokes", code:"@tabla-strokes", name:"Four-Way Tabla Strokes", by:"Research dataset on Zenodo", roles:["tabla"],
+   gives:"About 31,000 labelled single strokes in four classes: damped bass, damped treble, resonant bass, resonant treble", access:"No key · Python mirdata package",
+   licence:"CC BY (version differs by source, check Zenodo)", limits:"Bulk download", status:"ok", statusNote:"Credit the dataset authors",
+   site:"https://zenodo.org/record/7110248", docs:"https://mirdata.readthedocs.io/en/latest/_modules/mirdata/datasets/four_way_tabla.html",
+   request:"import mirdata\ntabla = mirdata.initialize(\"four_way_tabla\")\ntabla.download()\n# each track: audio + onsets for b, d, rb, rt strokes",
+   search:() => "https://zenodo.org/record/7110248" },
+ { id:"raga-json", code:"@raga-json", name:"OpenRaga ragamala-data", by:"Community project on GitHub", roles:["raag"],
+   gives:"One JSON file per Hindustani raag (RagaJSON format) for raag detail pages", access:"No key",
+   licence:"CC BY 4.0", limits:"GitHub API: 60 requests/hour without a token", status:"ok", statusNote:"Credit OpenRaga",
+   site:"https://github.com/OpenRaga/ragamala-data", docs:"https://github.com/OpenRaga/ragamala-data",
+   request:"GET https://api.github.com/repos/OpenRaga/ragamala-data/contents/data\nGET https://raw.githubusercontent.com/OpenRaga/ragamala-data/main/data/<raag>.json",
+   search:() => "https://github.com/OpenRaga/ragamala-data" },
+ { id:"raagadb", code:"@raagadb", name:"RaagaDB", by:"Open-source project on GitHub", roles:["raag"],
+   gives:"80+ raags with Aaroho, Avroho, Pakad, Vadi and Samvadi", access:"No key",
+   licence:"Not confirmed, check the repo", limits:"None", status:"check", statusNote:"Confirm the licence first",
+   site:"https://github.com/Parv-B/RaagaDB", docs:"https://github.com/Parv-B/RaagaDB",
+   request:"git clone https://github.com/Parv-B/RaagaDB\n# fields: Aaroho, Avroho, Pakad, Vadi, Samvadi",
+   search:() => "https://github.com/Parv-B/RaagaDB" },
+ { id:"archive", code:"@archive", name:"Internet Archive", by:"archive.org", roles:["tanpura","tabla","recordings"],
+   gives:"Historic raag recordings (including All India Radio era), extra tanpura and tabla material", access:"No key",
+   licence:"Varies per item (check licenseurl)", limits:"Be polite, no hard limit published", status:"check", statusNote:"Licence differs on every item",
+   site:"https://archive.org", docs:"https://archive.org/developers/",
+   request:"GET https://archive.org/advancedsearch.php\n  ?q=raag yaman AND mediatype:audio\n  &fl[]=identifier&fl[]=title&fl[]=licenseurl\n  &rows=50&output=json\nGET https://archive.org/metadata/<identifier>",
+   search:q => "https://archive.org/search?query=" + encodeURIComponent(q) },
+ { id:"ragajunglism", code:"@ragajunglism", name:"Ragajunglism tanpuras", by:"ragajunglism.org (no API)", roles:["tanpura"],
+   gives:"Real tanpura recordings in all 12 keys, described as open access", access:"Manual download",
+   licence:"No licence stated", limits:"No API", status:"check", statusNote:"Email the site for permission before bundling",
+   site:"https://ragajunglism.org/tanpuras", docs:"https://ragajunglism.org/tanpuras",
+   request:"# No API. Download each key once from\n# https://ragajunglism.org/tanpuras\n# and store it as assets/tanpura/<key>.mp3",
+   search:() => "https://ragajunglism.org/tanpuras" }
+];
+const SRC = Object.fromEntries(SOURCES.map(s => [s.id, s]));
+const ROLE_SOURCES = { tanpura:["freesound","ragajunglism","archive"], tabla:["freesound","tabla-strokes","archive"], raag:["raga-json","raagadb","dunya"], rec:["none","dunya","saraga","archive"] };
+const ROLE_STATUS = { // status of a source when used for a given role
+  "freesound":"ok", "ragajunglism":"check", "archive":"check", "tabla-strokes":"ok", "raga-json":"ok", "raagadb":"check", "dunya":"check",
+  "rec:dunya":"no", "rec:saraga":"no", "rec:archive":"check", "rec:none":"ok"
+};
+
+const PRESETS = [
+  { id:"riyaz", name:"Riyaz Kit", blurb:"Daily practice: recorded tanpura and tabla, raag notes and old recordings to listen to.",
+    src:{ tanpura:"freesound", tabla:"freesound", raag:"raga-json", rec:"archive" }, key:"C#", pattern:"auto", raag:"yaman", taal:"teentaal", bpm:120 },
+  { id:"strokes", name:"Stroke-built Tabla", blurb:"Tabla assembled stroke by stroke, so every taal works at any tempo.",
+    src:{ tanpura:"ragajunglism", tabla:"tabla-strokes", raag:"raagadb", rec:"none" }, key:"D", pattern:"auto", raag:"bhupali", taal:"jhaptaal", bpm:100 },
+  { id:"concert", name:"Concert Study", blurb:"Official raag catalogue plus annotated concerts for listening and analysis.",
+    src:{ tanpura:"freesound", tabla:"tabla-strokes", raag:"dunya", rec:"saraga" }, key:"C", pattern:"auto", raag:"darbari", taal:"ektaal", bpm:48 },
+  { id:"safe", name:"Commercial Safe", blurb:"Only sources you can ship in a paid app, with credits included.",
+    src:{ tanpura:"freesound", tabla:"tabla-strokes", raag:"raga-json", rec:"none" }, key:"C", pattern:"auto", raag:"bhairav", taal:"dadra", bpm:140 }
+];
+
+/* ============================== HELPERS ============================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+                set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+const PLAY = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1l9 5-9 5z"/></svg>';
+const STOP = '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="2" width="8" height="8" rx="1"/></svg>';
+const EXT = " ↗";
+const stBadge = (s, label) => `<span class="st ${s}">${esc(label || ST[s])}</span>`;
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 1800); }
+async function copy(text) { try { await navigator.clipboard.writeText(text); toast("Copied"); } catch { toast("Select the text and copy it manually"); } }
+
+function parseSeq(str) {
+  const out = [];
+  for (const tok of str.split(/\s+/).filter(Boolean)) {
+    if (tok === ",") { out.push({ rest:true }); continue; }
+    const m = tok.match(/^(\.?)([SrRgGmMPdDnN])('?)$/);
+    if (m) out.push({ s:m[2], oct:m[1] ? -1 : m[3] ? 1 : 0 });
+  }
+  return out;
+}
+function swHTML(n, i) {
+  if (n.rest) return '<span class="rest">,</span>';
+  const cls = ["sw", "rgdn".includes(n.s) ? "k" : "", n.s === "M" ? "tv" : "", n.oct < 0 ? "lo" : n.oct > 0 ? "hi" : ""].join(" ");
+  return `<span class="${cls}" data-i="${i}">${SW[n.s][0]}</span>`;
+}
+const seqHTML = (str, id) => `<span class="seq" data-seq="${id || ""}">${parseSeq(str).map(swHTML).join("")}</span>`;
+const oneSw = s => swHTML({ s, oct:0 });
+const tpName = p => ({ P:"Pa", m:"Ma", N:"Ni" }[p]);
+const nowHour = () => new Date().getHours();
+const inHours = (r, h) => r.hours[0] <= h && h < r.hours[1];
+
+/* ============================== AUDIO ENGINE ============================== */
+const Engine = (() => {
+  let ctx = null, master, tBus, bBus, mBus, rev;
+  const cache = new Map(), vis = [], subs = { pluck:[], beat:[], note:[], state:[] };
+  let cfg = null, tp = null, tb = null, timer = null, phraseEnd = 0, melodyNodes = [], raf = 0, label = null;
+  const SINE = new Float32Array(4096); for (let i = 0; i < 4096; i++) SINE[i] = Math.sin(2 * Math.PI * i / 4096);
+  const on = (e, f) => subs[e].push(f), emit = (e, ...a) => subs[e].forEach(f => f(...a));
+
+  function ensure() {
+    if (ctx) { if (ctx.state === "suspended") ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; ctx = new AC();
+    master = ctx.createGain(); master.gain.value = 0.85;
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 3;
+    master.connect(comp); comp.connect(ctx.destination);
+    rev = ctx.createConvolver(); rev.buffer = makeIR();
+    const rg = ctx.createGain(); rg.gain.value = 0.3; rev.connect(rg); rg.connect(master);
+    const bus = (wet) => { const g = ctx.createGain(); g.connect(master); const s = ctx.createGain(); s.gain.value = wet; g.connect(s); s.connect(rev); return g; };
+    tBus = bus(0.55); bBus = bus(0.12); mBus = bus(0.35);
+  }
+  function makeIR() {
+    const sr = ctx.sampleRate, len = Math.floor(sr * 2.4), b = ctx.createBuffer(2, len, sr);
+    for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (sr * 0.5)) * (i < sr * .01 ? i / (sr * .01) : 1); }
+    return b;
+  }
+
+  // Tanpura string: additive synthesis with a sweeping jawari "bloom" across the harmonics
+  function tanpuraString(f, bright) {
+    const key = `t${f.toFixed(2)}_${bright.toFixed(2)}`; if (cache.has(key)) return cache.get(key);
+    const sr = ctx.sampleRate, dur = 7, len = Math.floor(sr * dur), out = new Float32Array(len);
+    const N = Math.min(56, Math.floor(10000 / f)), ph = new Float32Array(N + 1), inc = new Float32Array(N + 1), amp = new Float32Array(N + 1);
+    const shR = new Float32Array(N + 1), shP = new Float32Array(N + 1);
+    for (let n = 1; n <= N; n++) { ph[n] = Math.random() * 4096; inc[n] = n * f * (1 + (Math.random() - .5) * 0.0006) / sr * 4096; shR[n] = 0.3 + Math.random() * 1.4; shP[n] = Math.random() * 6.28; }
+    const peak = 3 + bright * N * 0.55, w = 2.5 + bright * 3, roll = 1.15 - bright * 0.45;
+    let max = 0;
+    for (let i0 = 0; i0 < len; i0 += 64) {
+      const t = i0 / sr, env = (t < 0.006 ? t / 0.006 : 1) * Math.exp(-t / 2.4);
+      const c = 1.5 + peak * (t / 0.9) * Math.exp(1 - t / 0.9);
+      for (let n = 1; n <= N; n++) {
+        const dn = n - c;
+        amp[n] = env * Math.pow(n, -roll) * (0.16 + Math.exp(-(dn * dn) / (2 * w * w))) * (1 + 0.2 * Math.sin(6.283 * shR[n] * t + shP[n]));
+      }
+      const end = Math.min(len, i0 + 64);
+      for (let i = i0; i < end; i++) {
+        let s = 0;
+        for (let n = 1; n <= N; n++) { let p = ph[n] + inc[n]; if (p >= 4096) p -= 4096; ph[n] = p; s += amp[n] * SINE[p | 0]; }
+        out[i] = s; const a = s < 0 ? -s : s; if (a > max) max = a;
+      }
+    }
+    const g = 0.6 / (max || 1); for (let i = 0; i < len; i++) out[i] *= g;
+    const fade = Math.floor(sr * 0.3); for (let i = 0; i < fade; i++) out[len - 1 - i] *= i / fade;
+    const buf = ctx.createBuffer(1, len, sr); buf.getChannelData(0).set(out); cache.set(key, buf); return buf;
+  }
+
+  // Tabla strokes, tuned so the dayan rings on Sa
+  function stroke(kind, f) {
+    const key = `b${kind}${f.toFixed(1)}`; if (cache.has(key)) return cache.get(key);
+    const sr = ctx.sampleRate, dur = { na:.9, tin:1, tun:1.3, te:.2, ge:1.1, ke:.18 }[kind], len = Math.floor(sr * dur), d = new Float32Array(len);
+    const partials = (list, att) => { for (const [r, a, tau] of list) { const w = 2 * Math.PI * f * r / sr, p0 = Math.random() * 6.28;
+      for (let i = 0; i < len; i++) { const t = i / sr; d[i] += a * Math.exp(-t / tau) * Math.sin(w * i + p0) * Math.min(1, t / att); } } };
+    const noise = (gain, tau, lp, hp) => { let y = 0, yh = 0, xp = 0; for (let i = 0; i < len; i++) { const x = Math.random() * 2 - 1; y += lp * (x - y);
+      let o = y; if (hp) { yh = hp * (yh + o - xp); xp = o; o = yh; } d[i] += gain * o * Math.exp(-i / sr / tau); } };
+    if (kind === "na") { partials([[1,.5,.3],[2,1,.26],[3,.65,.2],[4,.38,.14],[5,.2,.09]], .001); noise(.5, .004, .9, .9); }
+    if (kind === "tin") { partials([[1,1,.5],[2,.55,.34],[3,.25,.22],[4,.12,.14]], .002); noise(.25, .004, .7, .9); }
+    if (kind === "tun") { partials([[1,1,.8],[2,.22,.38],[3,.07,.2]], .004); noise(.12, .005, .4, 0); }
+    if (kind === "te") { partials([[1,.35,.03],[2,.3,.022]], .001); noise(1, .03, .5, .8); }
+    if (kind === "ke") { noise(1, .03, .08, 0); const w = 2 * Math.PI * 130 / sr; for (let i = 0; i < len; i++) d[i] += .8 * Math.exp(-i / sr / .04) * Math.sin(w * i); }
+    if (kind === "ge") { const fb = f * 0.36; let p = 0; for (let i = 0; i < len; i++) { const t = i / sr, fr = fb * (0.94 + 0.14 * (1 - Math.exp(-t / .12)));
+        p += 2 * Math.PI * fr / sr; d[i] += Math.exp(-t / .5) * (Math.sin(p) + .18 * Math.sin(2 * p) + .05 * Math.sin(3 * p)) * Math.min(1, t / .002); }
+      noise(.6, .01, .05, 0); }
+    let max = 0; for (let i = 0; i < len; i++) max = Math.max(max, Math.abs(d[i]));
+    const lvl = { na:.8, tin:.72, tun:.8, te:.5, ge:.9, ke:.6 }[kind] / (max || 1);
+    const fade = Math.floor(sr * .02); for (let i = 0; i < len; i++) d[i] *= lvl * (i > len - fade ? (len - i) / fade : 1);
+    const buf = ctx.createBuffer(1, len, sr); buf.getChannelData(0).set(d); cache.set(key, buf); return buf;
+  }
+
+  function fire(buf, t, gain, bus, pan = 0, rate = 1) {
+    const s = ctx.createBufferSource(); s.buffer = buf; s.playbackRate.value = rate;
+    const g = ctx.createGain(); g.gain.value = gain; s.connect(g);
+    if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; g.connect(p); p.connect(bus); } else g.connect(bus);
+    s.start(t); return s;
+  }
+  const at = (t, fn) => vis.push({ t, fn });
+
+  function tanpuraBuffers(c) {
+    const sa = saFreq(c.key), first = { P:sa * 3 / 4, m:sa * 2 / 3, N:sa * 15 / 16 }[c.pattern] || sa * 3 / 4;
+    return [tanpuraString(first, c.bright), tanpuraString(sa, c.bright), tanpuraString(sa / 2, c.bright)];
+  }
+  const tablaF = c => { const sa = saFreq(c.key); return sa * 2 > 345 ? sa * 1.5 : sa * 2; }; // dayan on Sa, or on Pa for high keys
+
+  function tick() {
+    const now = ctx.currentTime, ahead = now + 0.15;
+    if (tp && cfg.tanpura) {
+      const c = cfg.tanpura, u = 1.05 / c.speed, gaps = [1, 1, 1, 1.7];
+      while (tp.next < ahead) {
+        const bufs = tanpuraBuffers(c), i = tp.i, buf = [bufs[0], bufs[1], bufs[1], bufs[2]][i];
+        fire(buf, tp.next, [.75, .85, .8, 1][i] * c.vol, tBus, [-.35, .1, .3, -.1][i], i === 2 ? 1.0007 : 1);
+        at(tp.next, () => emit("pluck", i));
+        tp.next += gaps[i] * u; tp.i = (i + 1) % 4;
+      }
+    }
+    if (tb && cfg.tabla) {
+      const c = cfg.tabla, T = TAALS[c.taal], f = tablaF(cfg.tanpura || c);
+      while (tb.next < ahead) {
+        if (tb.i >= T.matras) tb.i = 0;
+        const beat = T.beats[tb.i], dur = 60 / c.bpm, sub = dur / beat.bols.length, idx = tb.i;
+        beat.bols.forEach((b, k) => { for (const s of (BOL[b] || ["na"])) fire(stroke(s, f), tb.next + k * sub, c.vol * (idx === 0 && k === 0 ? 1.15 : 1) * (k ? .8 : 1), bBus, s === "ge" || s === "ke" ? -.15 : .15); });
+        at(tb.next, () => emit("beat", idx, T.id, beat.label));
+        tb.next += dur; tb.i = idx + 1;
+      }
+    }
+    if (!tp && !tb && phraseEnd && now > phraseEnd) stop();
+  }
+  function frame() {
+    if (!ctx) return; const now = ctx.currentTime;
+    for (let i = vis.length - 1; i >= 0; i--) if (vis[i].t <= now) { const v = vis.splice(i, 1)[0]; v.fn(); }
+    raf = requestAnimationFrame(frame);
+  }
+  function startLoop() { if (!timer) { timer = setInterval(tick, 25); tick(); } if (!raf) raf = requestAnimationFrame(frame); }
+
+  function start(newCfg, lbl) {
+    ensure(); stop(true);
+    cfg = JSON.parse(JSON.stringify(newCfg)); label = lbl;
+    const t0 = ctx.currentTime + 0.12;
+    if (cfg.tanpura) { tanpuraBuffers(cfg.tanpura); tp = { next:t0, i:0 }; }
+    if (cfg.tabla) { tb = { next:t0 + (cfg.tanpura ? 0.6 : 0), i:0 }; }
+    if (cfg.phrase) schedulePhrase(cfg.phrase, t0 + (cfg.tanpura ? 1.2 : 0));
+    startLoop(); emit("state", true, label);
+  }
+  function update(part) {
+    if (!cfg) return;
+    for (const k of ["tanpura", "tabla"]) if (part[k] !== undefined) {
+      const was = !!cfg[k]; cfg[k] = part[k] ? { ...(cfg[k] || {}), ...part[k] } : null;
+      if (k === "tanpura") { if (cfg.tanpura && !was) tp = { next:ctx.currentTime + .05, i:0 }; if (!cfg.tanpura) tp = null; }
+      if (k === "tabla") { if (cfg.tabla && !was) tb = { next:ctx.currentTime + .05, i:0 }; if (!cfg.tabla) tb = null; }
+    }
+    if (part.label) { label = part.label; emit("state", true, label); }
+    if (!cfg.tanpura && !cfg.tabla && !phraseEnd) stop();
+  }
+  function schedulePhrase(p, t) {
+    const seq = parseSeq(p.text), sa = saFreq(p.key) * 2, step = p.step || 0.42;
+    const wave = ctx.createPeriodicWave(new Float32Array([0,1,.6,.45,.3,.22,.15,.1,.07,.05]), new Float32Array(10));
+    seq.forEach((n, i) => {
+      if (n.rest) { t += step * 0.6; return; }
+      const f = sa * SW[n.s][1] * (n.oct < 0 ? .5 : n.oct > 0 ? 2 : 1);
+      const o = ctx.createOscillator(); o.setPeriodicWave(wave); o.frequency.value = f;
+      const lp = ctx.createBiquadFilter(); lp.frequency.value = 2200;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.32, t + .03);
+      g.gain.setValueAtTime(.3, t + step * .85); g.gain.linearRampToValueAtTime(0, t + step * 1.05);
+      o.connect(lp); lp.connect(g); g.connect(mBus); o.start(t); o.stop(t + step * 1.1); melodyNodes.push(o);
+      at(t, () => emit("note", p.seqId, i)); t += step;
+    });
+    at(t, () => emit("note", p.seqId, -1));
+    phraseEnd = t + (cfg && (cfg.tanpura || cfg.tabla) ? 9999 : 0.3);
+    if (cfg && (cfg.tanpura || cfg.tabla)) { const end = t + 1.5; at(end, () => { if (cfg && cfg.phraseOnly) stop(); }); }
+  }
+  function playBol(bol, key) {
+    ensure(); const f = saFreq(key || "C#") * 2, t = ctx.currentTime + 0.02;
+    for (const s of (BOL[bol] || [bol])) fire(stroke(s, f), t, .9, bBus, s === "ge" || s === "ke" ? -.15 : .15);
+  }
+  function stop(silent) {
+    if (timer) { clearInterval(timer); timer = null; }
+    tp = tb = null; phraseEnd = 0; vis.length = 0;
+    melodyNodes.forEach(o => { try { o.stop(); } catch {} }); melodyNodes = [];
+    if (ctx && master) { // quick fade so ringing strings stop
+      const g = master.gain, t = ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0, t + .06); g.linearRampToValueAtTime(.85, t + .09);
+    }
+    const had = !!cfg; cfg = null;
+    if (!silent && had) emit("state", false, null);
+    if (!silent) emit("note", null, -1);
+  }
+  return { start, update, stop, playBol, on, get playing() { return !!cfg; }, get cfg() { return cfg; }, get label() { return label; } };
+})();
+
+/* ============================== NOW PLAYING BAR ============================== */
+let playingId = null;
+Engine.on("state", (on, lbl) => {
+  $("#np").hidden = !on; document.body.classList.toggle("np-on", on);
+  if (on && lbl) { $("#npTitle").textContent = lbl.title; $("#npSub").textContent = lbl.sub; playingId = lbl.id; }
+  if (!on) { playingId = null; $("#npBol").textContent = ""; }
+  document.querySelectorAll("[data-pid]").forEach(b => b.classList.toggle("playing", on && b.dataset.pid === playingId));
+  renderPlayButton();
+});
+Engine.on("beat", (i, taal, bol) => { $("#npBol").textContent = bol; });
+Engine.on("note", (seqId, i) => {
+  document.querySelectorAll(".sw.now").forEach(e => e.classList.remove("now"));
+  if (seqId && i >= 0) document.querySelectorAll(`[data-seq="${seqId}"] [data-i="${i}"]`).forEach(e => e.classList.add("now"));
+});
+$("#npStop").onclick = () => Engine.stop();
+
+function toggle(id, cfg, title, sub) {
+  if (Engine.playing && playingId === id) { Engine.stop(); return; }
+  Engine.start(cfg, { id, title, sub });
+}
+const tpCfg = (key, pattern = "P") => ({ key, pattern, speed:1, bright:.6, vol:.9 });
+const ACTIONS = {
+  tanpura(el) { const k = el.dataset.key, p = el.dataset.pattern || "P", src = SRC[el.dataset.src];
+    toggle(el.dataset.pid, { tanpura:tpCfg(k, p) }, `Tanpura · Sa ${k} · ${tpName(p)} tuning`, `Stand-in for ${src.code}: ${el.dataset.q || "tanpura " + k}`); },
+  theka(el) { const T = TAALS[el.dataset.taal], src = SRC[el.dataset.src], bpm = +el.dataset.bpm || (T.id === "ektaal" ? 60 : 110);
+    toggle(el.dataset.pid, { tabla:{ taal:T.id, bpm, vol:.9, key:"C#" } }, `Tabla · ${T.name} · ${T.matras} matras · ${bpm} bpm`, `Stand-in for ${src.code}: ${el.dataset.q || "tabla " + T.name.toLowerCase()}`); },
+  bol(el) { Engine.playBol(el.dataset.bol); el.classList.add("hit"); setTimeout(() => el.classList.remove("hit"), 90); },
+  phrase(el) { const r = RAAG[el.dataset.raag], part = el.dataset.part, key = el.dataset.key || "C#", withT = el.dataset.tanpura !== "no";
+    const text = part === "full" ? `${r.aaroh} , ${r.avaroh} , ${r.pakad}` : r[part];
+    toggle(el.dataset.pid, { tanpura:withT ? tpCfg(key, r.tanpura) : null, phrase:{ text, key, seqId:el.dataset.seq }, phraseOnly:true },
+      `${r.name} · ${part === "full" ? "aaroh, avaroh, pakad" : part}`, `Raag ${r.name} over tanpura Sa ${key}`); },
+  sa(el) { toggle(el.dataset.pid, { tanpura:{ ...tpCfg("C#", "P"), bright:.3 } }, "Tonic reference · Sa C#", "Stand-in for @saraga: track.tonic"); },
+  raag(el) { openRaag(el.dataset.raag); },
+  copy(el) { copy(el.closest(".codebox, .panel").querySelector("pre").textContent); },
+  source(el) { showSource(el.dataset.id); window.scrollTo({ top:0, behavior:"smooth" }); }
+};
+document.addEventListener("click", e => { const el = e.target.closest("[data-act]"); if (el && ACTIONS[el.dataset.act]) { e.preventDefault(); ACTIONS[el.dataset.act](el); } });
+
+/* ============================== LIBRARY ============================== */
+let libSel = store.get("libSel", "all");
+function renderRail() {
+  $("#rail").innerHTML = `<button class="all" data-sel="all" aria-current="${libSel === "all"}">All sources at once</button><hr>` +
+    SOURCES.map(s => `<button data-sel="${s.id}" aria-current="${libSel === s.id}"><span class="rc">${s.code}</span><span class="rn">${esc(s.name)}</span></button>`).join("");
+  $("#rail").querySelectorAll("button").forEach(b => b.onclick = () => showSource(b.dataset.sel));
+}
+function showSource(id) { libSel = id; store.set("libSel", id); renderRail(); renderLib(); }
+
+const pbtn = (pid, attrs, text = "Play stand-in") => `<button class="btn sm" data-pid="${pid}" ${attrs}>${PLAY}${text}</button>`;
+const openLink = (url, text = "Open results") => `<a class="btn sm" href="${url}" target="_blank" rel="noopener">${text}${EXT}</a>`;
+
+function head(s) {
+  return `<div class="src-head"><div class="t"><span class="chip code">${s.code}</span><h2>${esc(s.name)}</h2><p class="muted small">${esc(s.by)}</p></div>
+    <div class="tags">${stBadge(s.status, s.statusNote)}<a class="btn sm" href="${s.site}" target="_blank" rel="noopener">Website${EXT}</a><a class="btn sm" href="${s.docs}" target="_blank" rel="noopener">Docs${EXT}</a></div></div>
+  <dl class="facts"><div><dt>Gives you</dt><dd>${esc(s.gives)}</dd></div><div><dt>Access</dt><dd>${esc(s.access)}</dd></div>
+    <div><dt>Licence</dt><dd>${esc(s.licence)}</dd></div><div><dt>Limits</dt><dd>${esc(s.limits)}</dd></div></dl>
+  <div class="group"><h4>How your app calls it</h4><div class="codebox"><pre>${esc(s.request)}</pre><button class="btn sm" data-act="copy">Copy</button></div></div>`;
+}
+function keyGrid(src, q, pattern = "P") {
+  return `<div class="keys">${KEYS.map(k => `<button data-act="tanpura" data-src="${src}" data-key="${k}" data-pattern="${pattern}" data-q="${q.replace("{k}", k)}" data-pid="${src}-tp-${k}" aria-label="Tanpura Sa ${k}">${k}<small>${saFreq(k).toFixed(0)} Hz</small></button>`).join("")}</div>`;
+}
+function bolPads() {
+  return `<div class="pads">${BOL_PADS.map(([b, dv, d]) => `<button data-act="bol" data-bol="${b}"><span class="deva">${dv}</span><b>${b}</b><small>${d}</small></button>`).join("")}</div>`;
+}
+function thekaRows(src, qf, linkf) {
+  return `<div class="rows">${Object.values(TAALS).map(T => `<div class="row"><span class="q">${esc(qf(T))}</span>
+    <span class="d"><b>${T.name}</b> <span class="deva">${T.deva}</span> · ${T.matras} matras (${T.vibhag.join("+")}) · ${esc(T.use)}</span>
+    <span class="acts">${pbtn(`${src}-th-${T.id}`, `data-act="theka" data-src="${src}" data-taal="${T.id}" data-q="${esc(qf(T))}"`)}${linkf ? openLink(linkf(T)) : ""}</span></div>`).join("")}</div>`;
+}
+const legend = `<div class="legend"><span>Underlined = komal</span><span>Tick above Ma = tivra</span><span>Dot above = taar saptak</span><span>Dot below = mandra saptak</span></div>`;
+
+const PANELS = {
+  freesound(s) {
+    return head(s) + `
+    <div class="group"><h4>Tanpura · query "tanpura &lt;key&gt;" · pick a Sa</h4>${keyGrid("freesound", "tanpura {k}")}
+      <div class="rows" style="margin-top:10px">
+        <div class="row"><span class="q">tanpura Ma</span><span class="d">Ma-tuned tanpura for raags without Pa (Malkauns, Bageshree, Lalit)</span><span class="acts">${pbtn("fs-tp-ma", 'data-act="tanpura" data-src="freesound" data-key="C#" data-pattern="m" data-q="tanpura Ma"')}${openLink(s.search("tanpura ma"))}</span></div>
+        <div class="row"><span class="q">tambura drone</span><span class="d">Alternative spelling, finds more uploads</span><span class="acts">${pbtn("fs-tp-tam", 'data-act="tanpura" data-src="freesound" data-key="D" data-q="tambura drone"')}${openLink(s.search("tambura drone"))}</span></div>
+        <div class="row"><span class="q">tanpura</span><span class="d">Everything tagged tanpura</span><span class="acts">${openLink(s.search("tanpura"))}</span></div>
+      </div></div>
+    <div class="group"><h4>Tabla thekas · query "tabla &lt;taal&gt;"</h4>${thekaRows("freesound", T => "tabla " + T.name.toLowerCase(), T => s.search("tabla " + T.name.toLowerCase()))}</div>
+    <div class="group"><h4>Single bols · query "tabla &lt;bol&gt;" · tap to play</h4>${bolPads()}
+      <div class="tags" style="margin-top:10px">${BOL_PADS.map(([b]) => `<a class="chip" href="${s.search("tabla " + b.toLowerCase())}" target="_blank" rel="noopener">tabla ${b.toLowerCase()}${EXT}</a>`).join("")}</div></div>`;
+  },
+  dunya(s) {
+    const byThaat = {}; RAAGS.forEach(r => (byThaat[r.thaat] = byThaat[r.thaat] || []).push(r));
+    const eps = [["raag/","All raags (name, uuid, common name)"],["raag/&lt;uuid&gt;","One raag with its recordings and artists"],["taal/","All taals"],["laya/","Vilambit, madhya, drut"],["form/","Khayal, dhrupad, thumri…"],["instrument/","Instruments"],["artist/","Artists"],["recording/","Recordings (MusicBrainz ids)"],["release/","Albums and concerts"],["work/","Compositions (bandish)"]];
+    return head(s) + `
+    <div class="group"><h4>Endpoints · /api/hindustani/…</h4><div class="rows">${eps.map(([p, d]) => `<div class="row"><span class="q">${p}</span><span class="d">${d}</span></div>`).join("")}</div></div>
+    <div class="group"><h4>Raag catalogue preview · ${RAAGS.length} of Dunya's 195 raags, grouped by thaat</h4>
+      <div class="rows">${Object.entries(byThaat).map(([t, rs]) => `<div class="row"><span class="q" style="flex:0 0 96px">${t}</span><span class="d tags">${rs.map(r => `<button class="tag" data-act="raag" data-raag="${r.id}" style="cursor:pointer;background:none">${esc(r.name)} <span class="deva">${r.deva}</span></button>`).join("")}</span></div>`).join("")}</div></div>
+    <div class="group"><h4>Taal catalogue preview · play each theka</h4>${thekaRows("dunya", T => "taal/ → " + T.name)}</div>`;
+  },
+  saraga(s) {
+    const ann = [["Tonic (Sa)","The Sa frequency of the performer, so you can tune the tanpura or score a singer"],["Pitch contour","Predominant melody over time, for drawing the melody or detecting the raag"],["Taal and sama","Taal name, tempo and every sam position, for syncing a theka"],["Sections","Alap, vilambit, drut and other sections with timestamps"],["Raag label","Which raag each track is in, for training a raag detector"]];
+    return head(s) + `
+    <div class="group"><h4>What each track comes with</h4><div class="rows">${ann.map(([a, d]) => `<div class="row"><span class="q" style="flex:0 0 140px;font-family:var(--f-body);font-weight:600">${a}</span><span class="d">${d}</span></div>`).join("")}</div></div>
+    <div class="group"><h4>Stand-ins for app features built on Saraga</h4><div class="rows">
+      <div class="row"><span class="q">track.tonic</span><span class="d">Reference Sa drone a singer can match against</span><span class="acts">${pbtn("sg-sa", 'data-act="sa"')}</span></div>
+      <div class="row"><span class="q">track.sama</span><span class="d">Theka locked to the sam positions of a concert</span><span class="acts">${pbtn("sg-sama", 'data-act="theka" data-src="saraga" data-taal="teentaal" data-q="track.sama (teentaal)"')}</span></div>
+      <div class="row"><span class="q">track.raags</span><span class="d">Raag of the track, shown here with Yaman's aaroh and avaroh</span><span class="acts">${pbtn("sg-raag", 'data-act="phrase" data-raag="yaman" data-part="full" data-seq="sg"')}</span></div>
+    </div></div>
+    <div class="group"><h4>Datasets</h4><div class="rows">
+      <div class="row"><span class="q">saraga_hindustani</span><span class="d">Hindustani concerts, about 4 GB</span><span class="acts">${openLink("https://zenodo.org/records/4301737", "Zenodo")}</span></div>
+      <div class="row"><span class="q">saraga_carnatic</span><span class="d">Carnatic concerts, about 14 GB, 168 tracks with multitrack audio</span><span class="acts">${openLink("https://zenodo.org/records/4301737", "Zenodo")}</span></div>
+      <div class="row"><span class="q">saraga_audiovisual</span><span class="d">Audio, video and gesture data (2024)</span><span class="acts">${openLink("https://zenodo.org/records/15102483", "Zenodo")}</span></div>
+    </div></div>`;
+  },
+  "tabla-strokes"(s) {
+    const cls = [["b","Damped bass","Bayan, flat slap (Ke, Kat)","Ke"],["d","Damped treble","Dayan, closed (Te, Ti, Ra)","Te"],["rb","Resonant bass","Bayan, open (Ge, Ga)","Ge"],["rt","Resonant treble","Dayan, ringing (Na, Tin, Tun)","Na"]];
+    return head(s) + `
+    <div class="group"><h4>The four stroke classes · tap to play</h4><div class="pads">${cls.map(([c, n, d, b]) => `<button data-act="bol" data-bol="${b}"><b class="mono" style="font-size:16px">${c}</b><small><b style="font-size:12px;color:var(--ink)">${n}</b><br>${d}</small></button>`).join("")}</div></div>
+    <div class="group"><h4>Every bol, built from those strokes</h4>${bolPads()}</div>
+    <div class="group"><h4>Thekas assembled stroke by stroke</h4>${thekaRows("tabla-strokes", T => `${T.name}: ${T.beats.map(b => b.label).join(" ")}`)}</div>
+    <div class="group"><h4>Related</h4><div class="rows"><div class="row"><span class="q">Tabla Solo Dataset</span><span class="d">38 teentaal solos with bol scores, played by Pt. Arvind Mulgaonkar. Restricted, request access.</span><span class="acts">${openLink("https://zenodo.org/record/1267023", "Zenodo")}</span></div></div></div>`;
+  },
+  "raga-json"(s) { return head(s) + `<div class="group"><h4>Raag explorer · ${RAAGS.length} raags</h4>${raagExplorer()}</div>`; },
+  raagadb(s) {
+    return head(s) + `<div class="group"><h4>All raags in RaagaDB's fields</h4><div class="tbl-wrap"><table>
+      <thead><tr><th>Raag</th><th>Aaroho</th><th>Avroho</th><th>Pakad</th><th>Vadi</th><th>Samvadi</th><th></th></tr></thead>
+      <tbody>${RAAGS.map(r => `<tr><td><button class="tag" data-act="raag" data-raag="${r.id}" style="cursor:pointer;background:none;white-space:nowrap">${esc(r.name)}</button></td>
+        <td>${seqHTML(r.aaroh, "db-a-" + r.id)}</td><td>${seqHTML(r.avaroh, "db-v-" + r.id)}</td><td>${seqHTML(r.pakad, "db-p-" + r.id)}</td>
+        <td>${oneSw(r.vadi)}</td><td>${oneSw(r.samvadi)}</td>
+        <td>${pbtn("db-" + r.id, `data-act="phrase" data-raag="${r.id}" data-part="aaroh" data-seq="db-a-${r.id}"`, "Aaroh")}</td></tr>`).join("")}</tbody></table></div>
+      <div style="margin-top:8px">${legend}</div></div>`;
+  },
+  archive(s) {
+    const qs = [["tanpura","Tanpura recordings and drones","tanpura",{ act:"tanpura", key:"C" }],["tabla solo","Tabla solos and lehras","tabla",{ act:"theka", taal:"teentaal" }],
+      ["raag yaman","Yaman performances","raag",{ act:"phrase", raag:"yaman" }],["raag bhairavi","Bhairavi performances","raag",{ act:"phrase", raag:"bhairavi" }],
+      ["raag darbari","Darbari performances","raag",{ act:"phrase", raag:"darbari" }],["raag malkauns","Malkauns performances","raag",{ act:"phrase", raag:"malkauns" }],
+      ["all india radio hindustani","Archival radio broadcasts","rec",null]];
+    return head(s) + `<div class="group"><h4>Searches your app runs</h4><div class="rows">${qs.map(([q, d, k, a], i) => `<div class="row"><span class="q">${q}</span><span class="d">${d}</span><span class="acts">
+      ${a ? pbtn("ia-" + i, a.act === "tanpura" ? `data-act="tanpura" data-src="archive" data-key="${a.key}" data-q="${q}"` : a.act === "theka" ? `data-act="theka" data-src="archive" data-taal="${a.taal}" data-q="${q}"` : `data-act="phrase" data-raag="${a.raag}" data-part="full" data-seq="ia-${i}"`) : ""}
+      ${openLink(s.search(q))}</span></div>`).join("")}</div></div>`;
+  },
+  ragajunglism(s) {
+    return head(s) + `<div class="group"><h4>All 12 keys · pick a Sa</h4>${keyGrid("ragajunglism", "ragajunglism tanpura {k}")}</div>
+      <div class="group"><h4>First string</h4><div class="rows">
+        <div class="row"><span class="q">Pa – Sa – Sa – Sa</span><span class="d">Standard tuning for most raags</span><span class="acts">${pbtn("rj-p", 'data-act="tanpura" data-src="ragajunglism" data-key="C#" data-pattern="P"')}</span></div>
+        <div class="row"><span class="q">Ma – Sa – Sa – Sa</span><span class="d">For raags without Pa, such as Malkauns</span><span class="acts">${pbtn("rj-m", 'data-act="tanpura" data-src="ragajunglism" data-key="C#" data-pattern="m"')}</span></div>
+        <div class="row"><span class="q">Ni – Sa – Sa – Sa</span><span class="d">For Marwa and similar raags</span><span class="acts">${pbtn("rj-n", 'data-act="tanpura" data-src="ragajunglism" data-key="C#" data-pattern="N"')}</span></div>
+      </div></div>`;
+  }
+};
+
+let rxSel = store.get("rxSel", "yaman"), rxQ = "", rxThaat = "";
+function raagCard(r, ctx = "rx") {
+  const parts = [["aaroh","Aaroh"],["avaroh","Avaroh"],["pakad","Pakad"]];
+  return `<div class="raag"><div class="raag-h"><span class="deva">${r.deva}</span><div><h3>${esc(r.name)}</h3><p class="muted small">${r.thaat} thaat · ${esc(r.time)}</p></div></div>
+    <dl class="kv">${parts.map(([p, l]) => `<div><dt>${l}</dt><dd>${seqHTML(r[p], `${ctx}-${p}-${r.id}`)}</dd><span>${pbtn(`${ctx}-${p}-${r.id}`, `data-act="phrase" data-raag="${r.id}" data-part="${p}" data-seq="${ctx}-${p}-${r.id}"`, "Play")}</span></div>`).join("")}</dl>
+    <div class="tags"><span class="tag">Vadi <b>${SW[r.vadi][0]}</b></span><span class="tag">Samvadi <b>${SW[r.samvadi][0]}</b></span><span class="tag">Jati <b>${esc(r.jati)}</b></span>
+      <span class="tag">Varjit <b>${esc(r.varjit)}</b></span><span class="tag">Mood <b>${esc(r.mood)}</b></span><span class="tag">Tanpura <b>${tpName(r.tanpura)}–Sa</b></span></div>
+    <p class="small">${esc(r.note)}</p>
+    <div><span class="muted small">${r.thaat} thaat scale: </span>${seqHTML(THAATS[r.thaat], "")}</div>
+    ${legend}</div>`;
+}
+function raagExplorer() {
+  const h = nowHour();
+  return `<div class="filters"><input type="search" id="rxQ" placeholder="Search raags" value="${esc(rxQ)}" aria-label="Search raags">
+    <select id="rxThaat" aria-label="Filter by thaat"><option value="">All thaats</option>${Object.keys(THAATS).map(t => `<option ${t === rxThaat ? "selected" : ""}>${t}</option>`).join("")}</select>
+    <span class="chip" style="align-self:center">Right now (${h}:00): ${RAAGS.filter(r => inHours(r, h)).map(r => r.name).join(", ") || "none listed"}</span></div>
+    <div class="rx"><div class="rx-list" id="rxList"></div><div id="rxDetail" style="min-width:0"></div></div>`;
+}
+function fillExplorer() {
+  const list = $("#rxList"); if (!list) return;
+  const rs = RAAGS.filter(r => (!rxThaat || r.thaat === rxThaat) && (r.name + r.deva).toLowerCase().includes(rxQ.toLowerCase()));
+  list.innerHTML = `<div class="th">${rs.length} raags</div>` + rs.map(r => `<button data-id="${r.id}" aria-current="${r.id === rxSel}"><span>${esc(r.name)}</span><span class="deva">${r.deva}</span></button>`).join("");
+  list.querySelectorAll("button").forEach(b => b.onclick = () => { rxSel = b.dataset.id; store.set("rxSel", rxSel); fillExplorer(); });
+  $("#rxDetail").innerHTML = raagCard(RAAG[rxSel] || rs[0] || RAAGS[0]);
+  $("#rxQ").oninput = e => { rxQ = e.target.value; fillExplorer(); $("#rxQ").focus(); };
+  $("#rxThaat").onchange = e => { rxThaat = e.target.value; fillExplorer(); };
+}
+function openRaag(id) {
+  const o = document.createElement("div"); o.className = "overlay"; o.innerHTML = raagCard(RAAG[id], "ov");
+  o.querySelector(".raag").insertAdjacentHTML("afterbegin", `<button class="btn sm" style="align-self:flex-end" data-close>Close</button>`);
+  o.onclick = e => { if (e.target === o || e.target.closest("[data-close]")) o.remove(); };
+  document.body.appendChild(o); syncPlaying();
+}
+function syncPlaying() { document.querySelectorAll("[data-pid]").forEach(b => b.classList.toggle("playing", Engine.playing && b.dataset.pid === playingId)); }
+
+function miniCard(s, body) {
+  return `<div class="mini"><div class="mini-h"><div><span class="chip code">${s.code}</span><h3 style="margin-top:6px">${esc(s.name)}</h3></div>${stBadge(s.status)}</div>
+    <p class="small muted">${esc(s.gives)}</p>${body}<div class="foot"><span class="small muted">${esc(s.access)}</span><button class="btn sm" data-act="source" data-id="${s.id}">Open full view</button></div></div>`;
+}
+function renderAll() {
+  const r = RAAG[rxSel] || RAAGS[0];
+  const b = {
+    freesound:`<div class="keys">${KEYS.slice(0, 6).map(k => `<button data-act="tanpura" data-src="freesound" data-key="${k}" data-q="tanpura ${k}" data-pid="freesound-tp-${k}">${k}</button>`).join("")}</div>
+      <div class="pads">${BOL_PADS.slice(0, 4).map(([bl, dv]) => `<button data-act="bol" data-bol="${bl}"><span class="deva">${dv}</span><b>${bl}</b></button>`).join("")}</div>
+      <div>${pbtn("freesound-th-teentaal", 'data-act="theka" data-src="freesound" data-taal="teentaal" data-q="tabla teentaal"', "Teentaal")} ${pbtn("freesound-th-keherwa", 'data-act="theka" data-src="freesound" data-taal="keherwa" data-q="tabla keherwa"', "Keherwa")}</div>`,
+    dunya:`<div class="tags">${RAAGS.slice(0, 9).map(x => `<button class="tag" data-act="raag" data-raag="${x.id}" style="cursor:pointer;background:none">${esc(x.name)}</button>`).join("")}<span class="tag muted">+186 more in Dunya</span></div>
+      <div class="tags">${Object.values(TAALS).map(T => `<span class="tag">${T.name} <b>${T.matras}</b></span>`).join("")}</div>`,
+    saraga:`<div class="tags"><span class="tag">Tonic</span><span class="tag">Pitch</span><span class="tag">Sama</span><span class="tag">Sections</span><span class="tag">Raag</span></div>
+      <div>${pbtn("sg-sa", 'data-act="sa"', "Tonic reference")}</div>`,
+    "tabla-strokes":`<div class="pads">${[["b","Ke"],["d","Te"],["rb","Ge"],["rt","Na"]].map(([c, bl]) => `<button data-act="bol" data-bol="${bl}"><b class="mono">${c}</b><small>${bl}</small></button>`).join("")}</div>
+      <div>${pbtn("tabla-strokes-th-jhaptaal", 'data-act="theka" data-src="tabla-strokes" data-taal="jhaptaal" data-q="Jhaptaal from strokes"', "Jhaptaal")} ${pbtn("tabla-strokes-th-dadra", 'data-act="theka" data-src="tabla-strokes" data-taal="dadra" data-q="Dadra from strokes"', "Dadra")}</div>`,
+    "raga-json":`<div class="raag-h"><span class="deva" style="font-size:28px">${r.deva}</span><div><b>${esc(r.name)}</b><div class="small muted">${r.thaat} · ${esc(r.time)}</div></div></div>
+      <div class="kv"><div><dt>Aaroh</dt><dd>${seqHTML(r.aaroh, "mini-a")}</dd><span>${pbtn("mini-a", `data-act="phrase" data-raag="${r.id}" data-part="aaroh" data-seq="mini-a"`, "Play")}</span></div></div>`,
+    raagadb:`<div class="tbl-wrap"><table><thead><tr><th>Raag</th><th>Vadi</th><th>Samvadi</th></tr></thead><tbody>${RAAGS.slice(0, 5).map(x => `<tr><td>${esc(x.name)}</td><td>${oneSw(x.vadi)}</td><td>${oneSw(x.samvadi)}</td></tr>`).join("")}</tbody></table></div>`,
+    archive:`<div class="tags">${["tanpura","tabla solo","raag yaman","raag bhairavi"].map(q => `<a class="tag" href="${SRC.archive.search(q)}" target="_blank" rel="noopener">${q}${EXT}</a>`).join("")}</div>`,
+    ragajunglism:`<div class="keys">${KEYS.map(k => `<button data-act="tanpura" data-src="ragajunglism" data-key="${k}" data-q="ragajunglism tanpura ${k}" data-pid="ragajunglism-tp-${k}">${k}</button>`).join("")}</div>`
+  };
+  return `<div class="src-head"><div class="t"><h2>All sources at once</h2><p class="muted small">Every API side by side. Play from any card, or open its full view.</p></div>
+    <div class="tags">${["ok","check","no"].map(st => `${stBadge(st, ST[st] + ": " + SOURCES.filter(s => s.status === st).length)}`).join("")}</div></div>
+    <div class="allgrid">${SOURCES.map(s => miniCard(s, b[s.id])).join("")}</div>`;
+}
+function renderLib() {
+  $("#libMain").innerHTML = libSel === "all" ? renderAll() : PANELS[libSel](SRC[libSel]);
+  if (libSel === "raga-json") fillExplorer();
+  syncPlaying();
+}
+
+/* ============================== STUDIO ============================== */
+const defaultDesign = () => ({ ...JSON.parse(JSON.stringify(PRESETS[0])), version:"riyaz", tpOn:true, tbOn:true, speed:1, bright:.6, tpVol:.85, tbVol:.8 });
+let D = store.get("design", null) || defaultDesign();
+let saved = store.get("savedVersions", []);
+const pattern = () => D.pattern === "auto" ? RAAG[D.raag].tanpura : D.pattern;
+const laya = bpm => bpm <= 60 ? "Vilambit (slow)" : bpm <= 160 ? "Madhya (medium)" : "Drut (fast)";
+const worst = list => list.includes("no") ? "no" : list.includes("check") ? "check" : "ok";
+function roleStatus() {
+  return { tanpura:ROLE_STATUS[D.src.tanpura], tabla:ROLE_STATUS[D.src.tabla], raag:ROLE_STATUS[D.src.raag], rec:ROLE_STATUS["rec:" + D.src.rec] };
+}
+function requestFor(role) {
+  const s = D.src[role], T = TAALS[D.taal], r = RAAG[D.raag];
+  if (role === "tanpura") return { freesound:`GET https://freesound.org/apiv2/search/text/?query=tanpura ${D.key}&filter=duration:[30 TO *] license:"Creative Commons 0"&fields=id,name,username,license,previews&token=$FREESOUND_API_KEY`,
+    ragajunglism:`Bundled file assets/tanpura/${D.key}.mp3 (downloaded once from ragajunglism.org/tanpuras)`,
+    archive:`GET https://archive.org/advancedsearch.php?q=tanpura ${D.key} AND mediatype:audio&fl[]=identifier&fl[]=licenseurl&output=json` }[s];
+  if (role === "tabla") return { freesound:`GET https://freesound.org/apiv2/search/text/?query=tabla ${T.name.toLowerCase()}&filter=tag:loop&fields=id,name,username,license,previews&token=$FREESOUND_API_KEY`,
+    "tabla-strokes":`mirdata four_way_tabla → strokes b/d/rb/rt sequenced as ${T.name} (${T.beats.map(b => b.label).join(" ")}) at ${D.bpm} bpm`,
+    archive:`GET https://archive.org/advancedsearch.php?q=tabla ${T.name.toLowerCase()} AND mediatype:audio&output=json` }[s];
+  if (role === "raag") return { "raga-json":`GET https://raw.githubusercontent.com/OpenRaga/ragamala-data/main/data/<${r.id}>.json`,
+    raagadb:`RaagaDB entry "${r.name}" → Aaroho, Avroho, Pakad, Vadi, Samvadi`,
+    dunya:`GET https://dunya.compmusic.upf.edu/api/hindustani/raag/ (find "${r.name}") · Authorization: Token $DUNYA_TOKEN` }[s];
+  if (role === "rec") return { none:null, dunya:`GET https://dunya.compmusic.upf.edu/api/hindustani/raag/<uuid> → recordings`, saraga:`mirdata saraga_hindustani → tracks where raag = ${r.name}`,
+    archive:`GET https://archive.org/advancedsearch.php?q=raag ${r.name.toLowerCase()} AND mediatype:audio&output=json` }[s];
+}
+function credits() {
+  const r = RAAG[D.raag], c = [];
+  c.push({ freesound:"Tanpura: Freesound uploaders (CC0)", ragajunglism:"Tanpura: Ragajunglism (with permission)", archive:"Tanpura: Internet Archive contributors" }[D.src.tanpura]);
+  c.push({ freesound:"Tabla: Freesound uploaders (CC0)", "tabla-strokes":"Tabla strokes: Four-Way Tabla dataset (CC BY)", archive:"Tabla: Internet Archive contributors" }[D.src.tabla]);
+  c.push({ "raga-json":"Raag data: OpenRaga (CC BY 4.0)", raagadb:"Raag data: RaagaDB", dunya:"Raag data: CompMusic Dunya" }[D.src.raag]);
+  if (D.src.rec !== "none") c.push({ dunya:"Recordings: CompMusic Dunya", saraga:"Recordings: Saraga (CC BY-NC)", archive:"Recordings: Internet Archive" }[D.src.rec]);
+  return c;
+}
+function appConfig() {
+  const r = RAAG[D.raag], T = TAALS[D.taal];
+  return JSON.stringify({
+    version:D.name, commercial:ST[worst(Object.values(roleStatus()))],
+    tanpura:{ source:SRC[D.src.tanpura].code, sa:D.key, tuning:`${tpName(pattern())}-Sa-Sa-Sa`, request:requestFor("tanpura") },
+    tabla:{ source:SRC[D.src.tabla].code, taal:T.name, matras:T.matras, bpm:D.bpm, laya:laya(D.bpm), request:requestFor("tabla") },
+    raag:{ source:SRC[D.src.raag].code, name:r.name, thaat:r.thaat, time:r.time, request:requestFor("raag") },
+    recordings:D.src.rec === "none" ? null : { source:SRC[D.src.rec].code, request:requestFor("rec") },
+    credits:credits()
+  }, null, 2);
+}
+function claudeLine() {
+  const r = RAAG[D.raag], T = TAALS[D.taal];
+  return `Build the "${D.name}" practice screen: tanpura from ${SRC[D.src.tanpura].code} (Sa ${D.key}, ${tpName(pattern())} tuning), tabla from ${SRC[D.src.tabla].code} (${T.name} at ${D.bpm} bpm) and raag details from ${SRC[D.src.raag].code} (${r.name})` +
+    (D.src.rec !== "none" ? `, with example recordings from ${SRC[D.src.rec].code}` : "") + `. Follow sound-apis/REGISTRY.md for endpoints, keys and licences.`;
+}
+function save() { store.set("design", D); }
+
+function renderControls() {
+  const rs = roleStatus(), opt = (role, v) => ROLE_SOURCES[role].map(id => `<option value="${id}" ${id === v ? "selected" : ""}>${id === "none" ? "None" : SRC[id].code + " · " + SRC[id].name}</option>`).join("");
+  const byThaat = {}; RAAGS.forEach(r => (byThaat[r.thaat] = byThaat[r.thaat] || []).push(r));
+  const h = nowHour(), nowR = RAAGS.filter(r => inHours(r, h));
+  const vcard = (p, isSaved) => { const st = worst([ROLE_STATUS[p.src.tanpura], ROLE_STATUS[p.src.tabla], ROLE_STATUS[p.src.raag], ROLE_STATUS["rec:" + p.src.rec]]);
+    return `<button class="vcard" data-v="${p.id}" aria-pressed="${D.version === p.id}"><b>${esc(p.name)}</b><p>${esc(p.blurb || `${RAAG[p.raag].name} · ${TAALS[p.taal].name} · Sa ${p.key}`)}</p>
+      <span class="tags">${["tanpura","tabla","raag"].map(k => `<span class="chip code">${SRC[p.src[k]].code}</span>`).join("")}${p.src.rec !== "none" ? `<span class="chip code">${SRC[p.src.rec].code}</span>` : ""}</span>
+      ${stBadge(st)}${isSaved ? `<span class="x" data-del="${p.id}" role="button">Remove</span>` : ""}</button>`; };
+  $("#controls").innerHTML = `
+  <div class="panel"><div><h2>Versions</h2><p class="muted small">Each version combines several APIs into one tanpura + tabla + raag setup. Pick one, then adjust anything below.</p></div>
+    <div class="vgrid">${PRESETS.map(p => vcard(p)).join("")}${saved.map(p => vcard(p, true)).join("")}</div>
+    <div class="rng" style="gap:8px"><input type="text" id="vName" placeholder="Name this version" value="${D.version === "custom" ? esc(D.name) : ""}" style="flex:1"><button class="btn" id="vSave">Save version</button></div></div>
+
+  <div class="panel"><div><h3>Sources</h3><p class="muted small">Which API supplies each part. The badge shows whether that part can ship in a paid app.</p></div>
+    <div class="srcsel">
+      <label>Tanpura from<select id="sTanpura">${opt("tanpura", D.src.tanpura)}</select>${stBadge(rs.tanpura)}</label>
+      <label>Tabla from<select id="sTabla">${opt("tabla", D.src.tabla)}</select>${stBadge(rs.tabla)}</label>
+      <label>Raag details from<select id="sRaag">${opt("raag", D.src.raag)}</select>${stBadge(rs.raag)}</label>
+      <label>Example recordings<select id="sRec">${opt("rec", D.src.rec)}</select>${stBadge(rs.rec)}</label>
+    </div></div>
+
+  <div class="panel"><div class="rng" style="justify-content:space-between"><h3>Tanpura</h3><label class="small"><input type="checkbox" id="tpOn" ${D.tpOn ? "checked" : ""}> Play tanpura</label></div>
+    <div class="field"><label>Sa (key)</label><div class="seg" id="keySeg">${KEYS.map(k => `<button data-k="${k}" aria-pressed="${k === D.key}">${k}</button>`).join("")}</div>
+      <span class="help">Men usually sing around C to D, women around G to A#.</span></div>
+    <div class="field"><label>First string</label><div class="seg" id="patSeg">${[["auto",`Auto (${tpName(RAAG[D.raag].tanpura)} for ${RAAG[D.raag].name})`],["P","Pa"],["m","Ma"],["N","Ni"]].map(([v, l]) => `<button data-p="${v}" aria-pressed="${v === D.pattern}">${l}</button>`).join("")}</div></div>
+    <div class="field"><label for="spd">Pluck speed</label><div class="rng"><input type="range" id="spd" min="0.6" max="1.6" step="0.05" value="${D.speed}"><output>${D.speed.toFixed(2)}×</output></div></div>
+    <div class="field"><label for="brt">Jawari (buzz)</label><div class="rng"><input type="range" id="brt" min="0" max="1" step="0.1" value="${D.bright}"><output>${D.bright < .35 ? "Soft" : D.bright < .7 ? "Open" : "Bright"}</output></div></div>
+    <div class="field"><label for="tpv">Volume</label><div class="rng"><input type="range" id="tpv" min="0" max="1" step="0.05" value="${D.tpVol}"><output>${Math.round(D.tpVol * 100)}%</output></div></div></div>
+
+  <div class="panel"><div class="rng" style="justify-content:space-between"><h3>Tabla</h3><label class="small"><input type="checkbox" id="tbOn" ${D.tbOn ? "checked" : ""}> Play tabla</label></div>
+    <div class="field"><label>Taal</label><div class="seg" id="taalSeg">${Object.values(TAALS).map(T => `<button data-t="${T.id}" aria-pressed="${T.id === D.taal}">${T.name} · ${T.matras}</button>`).join("")}</div>
+      <span class="help">${esc(TAALS[D.taal].use)} Theka: ${TAALS[D.taal].beats.map(b => b.label).join(" ")}</span></div>
+    <div class="field"><label for="bpm">Tempo</label><div class="rng"><input type="range" id="bpm" min="30" max="320" step="2" value="${D.bpm}"><output>${D.bpm} bpm · ${laya(D.bpm).split(" ")[0]}</output></div></div>
+    <div class="field"><label for="tbv">Volume</label><div class="rng"><input type="range" id="tbv" min="0" max="1" step="0.05" value="${D.tbVol}"><output>${Math.round(D.tbVol * 100)}%</output></div></div></div>
+
+  <div class="panel"><h3>Raag</h3>
+    <div class="field"><label for="raagSel">Raag</label><select id="raagSel">${Object.entries(byThaat).map(([t, rs2]) => `<optgroup label="${t} thaat">${rs2.map(r => `<option value="${r.id}" ${r.id === D.raag ? "selected" : ""}>${r.name} · ${r.time.split("·").pop().trim()}</option>`).join("")}</optgroup>`).join("")}</select></div>
+    <div class="field"><label>Right now</label><div class="tags">${nowR.length ? nowR.map(r => `<button class="tag" data-nr="${r.id}" style="cursor:pointer;background:none">${esc(r.name)}</button>`).join("") : '<span class="muted small">No raag in this list is set for this hour.</span>'}</div></div></div>
+
+  <div class="panel"><div><h3>Hand this version to your app</h3><p class="muted small">Paste the line into Claude, or use the config in your code.</p></div>
+    <div class="codebox" style="margin:0"><pre id="claudeLine">${esc(claudeLine())}</pre><button class="btn sm" id="cpLine">Copy</button></div>
+    <div class="codebox" style="margin:0"><pre id="cfgJson">${esc(appConfig())}</pre><button class="btn sm" id="cpCfg">Copy</button></div></div>`;
+  wireControls();
+}
+function custom() { if (D.version !== "custom") { D.version = "custom"; D.name = "Custom version"; } }
+function changed(rerender = true) { save(); if (rerender) renderControls(); else refreshText(); renderPreview(); pushLive(); }
+function refreshText() { const a = $("#claudeLine"), b = $("#cfgJson"); if (a) a.textContent = claudeLine(); if (b) b.textContent = appConfig(); }
+function wireControls() {
+  document.querySelectorAll(".vcard").forEach(c => c.onclick = e => {
+    const del = e.target.closest("[data-del]"); if (del) { saved = saved.filter(s => s.id !== del.dataset.del); store.set("savedVersions", saved); renderControls(); return; }
+    const p = PRESETS.find(x => x.id === c.dataset.v) || saved.find(x => x.id === c.dataset.v);
+    D = { ...D, ...JSON.parse(JSON.stringify(p)), version:p.id }; changed();
+  });
+  $("#vSave").onclick = () => { const n = $("#vName").value.trim() || `My version ${saved.length + 1}`; const id = "u" + Date.now();
+    saved.push({ id, name:n, src:{ ...D.src }, key:D.key, pattern:D.pattern, raag:D.raag, taal:D.taal, bpm:D.bpm }); store.set("savedVersions", saved);
+    D.version = id; D.name = n; changed(); toast(`Saved "${n}" in this browser`); };
+  const sel = (id, role) => $(id).onchange = e => { D.src = { ...D.src, [role]:e.target.value }; custom(); changed(); };
+  sel("#sTanpura", "tanpura"); sel("#sTabla", "tabla"); sel("#sRaag", "raag"); sel("#sRec", "rec");
+  $("#tpOn").onchange = e => { D.tpOn = e.target.checked; changed(false); };
+  $("#tbOn").onchange = e => { D.tbOn = e.target.checked; changed(false); };
+  $("#keySeg").onclick = e => { const b = e.target.closest("button"); if (b) { D.key = b.dataset.k; custom(); changed(); } };
+  $("#patSeg").onclick = e => { const b = e.target.closest("button"); if (b) { D.pattern = b.dataset.p; custom(); changed(); } };
+  $("#taalSeg").onclick = e => { const b = e.target.closest("button"); if (b) { D.taal = b.dataset.t; custom(); changed(); } };
+  const rng = (id, k, fmt, num = parseFloat) => { const el = $(id); el.oninput = () => { D[k] = num(el.value); el.nextElementSibling.textContent = fmt(D[k]); if (k === "bpm") custom(); changed(false); }; };
+  rng("#spd", "speed", v => v.toFixed(2) + "×"); rng("#brt", "bright", v => v < .35 ? "Soft" : v < .7 ? "Open" : "Bright");
+  rng("#tpv", "tpVol", v => Math.round(v * 100) + "%"); rng("#tbv", "tbVol", v => Math.round(v * 100) + "%");
+  rng("#bpm", "bpm", v => `${v} bpm · ${laya(v).split(" ")[0]}`, x => parseInt(x, 10));
+  $("#raagSel").onchange = e => { D.raag = e.target.value; custom(); changed(); };
+  document.querySelectorAll("[data-nr]").forEach(b => b.onclick = () => { D.raag = b.dataset.nr; custom(); changed(); });
+  $("#cpLine").onclick = () => copy(claudeLine()); $("#cpCfg").onclick = () => copy(appConfig());
+}
+
+function chakra(T) {
+  const n = T.matras, cx = 120, cy = 120, R = 76, LR = 101, MR = 54;
+  let s = `<svg class="chakra" viewBox="-14 0 268 240" role="img" aria-label="${T.name} cycle of ${n} matras"><circle class="ring" cx="${cx}" cy="${cy}" r="${R}"/>`;
+  T.beats.forEach((b, i) => {
+    const a = -Math.PI / 2 + i * 2 * Math.PI / n, x = cx + R * Math.cos(a), y = cy + R * Math.sin(a), mk = T.markAt[i];
+    const lx = cx + LR * Math.cos(a), ly = cy + LR * Math.sin(a), mx = cx + MR * Math.cos(a), my = cy + MR * Math.sin(a);
+    s += `<circle class="dot ${i === 0 ? "sam" : ""} ${mk === "0" ? "khali" : ""}" data-b="${i}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${n > 12 ? 7 : 8.5}"/>`;
+    s += `<text class="bl" data-bl="${i}" x="${lx.toFixed(1)}" y="${(ly + 3.5).toFixed(1)}" text-anchor="middle">${b.label}</text>`;
+    if (mk) s += `<text class="mk" x="${mx.toFixed(1)}" y="${(my + 4).toFixed(1)}" text-anchor="middle">${mk}</text>`;
+  });
+  return s + `<text x="${cx}" y="${cy - 2}" text-anchor="middle" style="font-size:15px;font-weight:600">${T.name}</text><text class="bl" x="${cx}" y="${cy + 15}" text-anchor="middle" id="matraNow">${n} matras · ${D.bpm} bpm</text></svg>`;
+}
+function renderPreview() {
+  const r = RAAG[D.raag], T = TAALS[D.taal], p = pattern(), rs = roleStatus(), st = worst(Object.values(rs));
+  const d = new Date(), hh = String(d.getHours()).padStart(2, "0"), mm = String(d.getMinutes()).padStart(2, "0");
+  $("#preview").innerHTML = `
+  <div class="phone" aria-label="Preview of the practice screen in your app"><div class="screen">
+    <div class="sbar"><span>${hh}:${mm}</span><span>●●● ▮</span></div>
+    <div class="app-h"><b>Riyaz</b><span class="chip">${esc(D.name)}</span></div>
+    <div class="app-raag">
+      <div class="top2"><div><div class="deva">${r.deva}</div><div class="en">${esc(r.name)}</div></div><div style="text-align:right"><span class="chip">${r.thaat}</span><div class="small muted" style="font-size:11px;margin-top:4px">${esc(r.time.split("·").pop().trim())}</div></div></div>
+      <div><div class="lbl">Aaroh</div>${seqHTML(r.aaroh, "app-a")}</div>
+      <div><div class="lbl">Avaroh</div>${seqHTML(r.avaroh, "app-v")}</div>
+      <div class="tags" style="gap:4px"><span class="chip">Vadi ${SW[r.vadi][0]}</span><span class="chip">Samvadi ${SW[r.samvadi][0]}</span><button class="chip" data-act="phrase" data-raag="${r.id}" data-part="pakad" data-seq="app-p" data-key="${D.key}" data-tanpura="no" data-pid="app-pakad" style="border:0;cursor:pointer">▶ Pakad</button></div>
+      <div style="display:none">${seqHTML(r.pakad, "app-p")}</div>
+    </div>
+    <div class="strings" aria-label="Tanpura strings">${[tpName(p), "Sa", "Sa", "Sa"].map((n, i) => `<div class="string" data-s="${i}"><i></i><span>${n}${i === 3 ? "·" : ""}</span></div>`).join("")}</div>
+    <div class="small muted" style="text-align:center;font-size:11px">Tanpura · Sa ${D.key} · ${tpName(p)}–Sa–Sa–Sa${D.tpOn ? "" : " · off"}</div>
+    ${chakra(T)}
+    <div class="app-ctrl"><button class="bpmtoggle" id="bpmDown" aria-label="Slower">−5</button>
+      <div class="meta"><b>${T.name} · ${D.bpm} bpm</b>${laya(D.bpm)}${D.tbOn ? "" : " · tabla off"}</div>
+      <button class="bpmtoggle" id="bpmUp" aria-label="Faster">+5</button></div>
+    <div style="display:flex;justify-content:center;padding:6px 0 4px"><button class="playbig" id="appPlay" aria-label="Play"></button></div>
+    <div class="app-cred">${credits().map(esc).join(" · ")}</div>
+  </div></div>
+  <div class="uses"><div class="rows">
+    <div class="row"><span class="d"><b>What this version calls</b> ${stBadge(st)}</span></div>
+    ${["tanpura","tabla","raag","rec"].filter(k => D.src[k] !== "none").map(k => `<div class="row"><span class="d"><span class="chip code">${SRC[D.src[k]].code}</span> <b class="small">${{ tanpura:"Tanpura", tabla:"Tabla", raag:"Raag details", rec:"Recordings" }[k]}</b> ${stBadge(rs[k])}<br><span class="mono" style="font-size:12px;overflow-wrap:anywhere">${esc(requestFor(k))}</span></span></div>`).join("")}
+  </div><p class="small muted" style="margin-top:8px">Sounds in this preview are browser stand-ins. Your app plays the recordings from the sources above.</p></div>`;
+  renderPlayButton();
+  $("#appPlay").onclick = () => { if (Engine.playing && playingId === "studio") Engine.stop(); else Engine.start(liveCfg(), studioLabel()); };
+  $("#bpmDown").onclick = () => { D.bpm = Math.max(30, D.bpm - 5); custom(); changed(); };
+  $("#bpmUp").onclick = () => { D.bpm = Math.min(320, D.bpm + 5); custom(); changed(); };
+}
+function renderPlayButton() { const b = $("#appPlay"); if (!b) return; const on = Engine.playing && playingId === "studio"; b.innerHTML = on ? STOP : PLAY; b.setAttribute("aria-label", on ? "Stop" : "Play"); }
+const liveCfg = () => ({ tanpura:D.tpOn ? { key:D.key, pattern:pattern(), speed:D.speed, bright:D.bright, vol:D.tpVol } : null, tabla:D.tbOn ? { taal:D.taal, bpm:D.bpm, vol:D.tbVol, key:D.key } : null });
+const studioLabel = () => ({ id:"studio", title:`${D.name} · ${RAAG[D.raag].name} · ${TAALS[D.taal].name} ${D.bpm} bpm`, sub:`Tanpura ${SRC[D.src.tanpura].code} · tabla ${SRC[D.src.tabla].code} · raag ${SRC[D.src.raag].code}` });
+let lastTaal = null;
+function pushLive() {
+  if (!(Engine.playing && playingId === "studio")) return;
+  const c = liveCfg();
+  if (!c.tanpura && !c.tabla) { Engine.stop(); return; }
+  if (lastTaal && lastTaal !== D.taal) { Engine.start(c, studioLabel()); }
+  else Engine.update({ tanpura:c.tanpura, tabla:c.tabla, label:studioLabel() });
+  lastTaal = D.taal;
+}
+Engine.on("pluck", i => { const s = document.querySelector(`.string[data-s="${i}"]`); if (!s || playingId !== "studio") return; s.classList.remove("ring"); void s.offsetWidth; s.classList.add("ring"); clearTimeout(s._t); s._t = setTimeout(() => s.classList.remove("ring"), 1400); });
+Engine.on("beat", (i, taal) => {
+  if (playingId !== "studio" || taal !== D.taal) return;
+  document.querySelectorAll(".chakra .on").forEach(e => e.classList.remove("on"));
+  document.querySelector(`.chakra [data-b="${i}"]`)?.classList.add("on"); document.querySelector(`.chakra [data-bl="${i}"]`)?.classList.add("on");
+  const m = $("#matraNow"); if (m) m.textContent = `matra ${i + 1} of ${TAALS[taal].matras}`;
+});
+Engine.on("state", on => { if (on && playingId === "studio") lastTaal = D.taal; if (!on) { document.querySelectorAll(".chakra .on").forEach(e => e.classList.remove("on")); const m = $("#matraNow"); if (m) m.textContent = `${TAALS[D.taal].matras} matras · ${D.bpm} bpm`; } });
+
+/* ============================== ROUTING ============================== */
+function route() {
+  const studio = location.hash === "#studio";
+  $("#viewLibrary").hidden = studio; $("#viewStudio").hidden = !studio;
+  $("#tabLibrary").removeAttribute("aria-current"); $("#tabStudio").removeAttribute("aria-current");
+  (studio ? $("#tabStudio") : $("#tabLibrary")).setAttribute("aria-current", "page");
+}
+window.addEventListener("hashchange", route);
+renderRail(); renderLib(); renderControls(); renderPreview(); route();
+</script>

@@ -8,4 +8,5 @@ source's endpoints, auth, licence rules and which one to pick.
 
 - Keys live in env vars: `FREESOUND_API_KEY`, `DUNYA_TOKEN`. Never commit them.
 - Browse sources from the terminal: `python3 sound-apis/browse.py --help`
-- Visual library browser: `sound-apis/library.html`
+- Visual library browser (live API calls with your key): `sound-apis/library.html`
+- Showcase app (all sources + version designer): `sound-apis/app.html`, published at https://claude.ai/artifact/2DQ7pcVTJamnYxUH1MNpJ2
