@@ -1,0 +1,200 @@
+<meta charset="utf-8">
+<title>Yaman Practice</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="studio.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Tiro+Devanagari+Hindi&display=swap">
+<style>
+.pr { max-width:980px; margin:0 auto; padding-block:24px 48px; display:grid; gap:20px; }
+.hero { display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 22px; align-items:end; }
+.hero .deva { font-size:64px; line-height:.9; color:var(--brass); grid-row:span 2; }
+.hero h1 { font-size:30px; font-weight:600; }
+.hero .meta { color:var(--muted); font-size:15px; }
+.srcrow { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.inst { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0; }
+.card-h { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.big { font-size:34px; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; }
+.big small { font-size:14px; color:var(--muted); font-weight:500; }
+.who { font-size:13px; color:var(--muted); overflow-wrap:anywhere; }
+.miss { font-size:14px; color:var(--warn); }
+.transport { display:flex; align-items:center; justify-content:center; gap:18px; }
+.transport .playbig { width:72px; height:72px; }
+.transport .playbig svg { width:26px; height:26px; }
+.tempo { display:flex; align-items:center; gap:10px; }
+.tempo .rng { flex:1; }
+.meter { height:48px; }
+.cat { max-height:280px; overflow:auto; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); }
+.cat button { display:flex; justify-content:space-between; width:100%; border:0; border-top:1px solid var(--line); background:none; padding:7px 12px; text-align:left; font-size:14px; cursor:default; }
+.cat button:first-child { border-top:0; }
+.cat button[aria-current="true"] { background:var(--accent-soft); font-weight:600; }
+.chakra { max-width:300px; }
+@media (max-width: 760px) { .inst { grid-template-columns:minmax(0,1fr); } .hero .deva { font-size:48px; } .hero h1 { font-size:24px; } }
+</style>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand"><span class="mark" aria-hidden="true">स्वर</span><div><b>Riyaz</b><small>Practice screen</small></div></div>
+    <span class="st" id="libState"></span>
+  </div>
+</header>
+
+<main class="wrap"><div class="pr">
+  <section class="hero" id="hero"></section>
+  <section class="card" id="raagCard"></section>
+
+  <section class="inst">
+    <div class="card" id="tanpuraCard"></div>
+    <div class="card" id="tablaCard"></div>
+  </section>
+
+  <section class="transport">
+    <button class="playbig" id="play" aria-label="Play"></button>
+    <div><b id="nowLine">Ready</b><div class="who" id="nowSub">Tanpura first, tabla joins on the next sam.</div></div>
+  </section>
+
+  <section class="card"><div class="card-h"><h3>Raag catalogue</h3><span class="chip code">@dunya</span></div><div id="catalogue"></div></section>
+
+  <section class="card"><div class="card-h"><h3>Credits</h3><span class="chip">CC BY authors must be shown</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Used for</th><th>Recording or data</th><th>Author</th><th>Licence</th></tr></thead><tbody id="credits"></tbody></table></div></section>
+</div></main>
+
+<script src="core.js"></script>
+<script>
+/* Practice screen: Yaman · Sa C# · Teentaal 115 bpm.
+   Tanpura and tabla play only from real recordings in sounds.json (fetch_sounds.py).
+   Raag details come from raag/yaman.json (@raga-json) and the catalogue from raag/catalogue.json (@dunya), both from fetch_raag.py. */
+const P = { raag:"yaman", key:"C#", taal:"teentaal", bpm:115, tpOn:true, tbOn:true, tpVol:.9, tbVol:.85, ...store.get("practice", {}) };
+P.raag = "yaman"; P.key = "C#"; P.taal = "teentaal";
+const saveP = () => store.set("practice", { bpm:P.bpm, tpOn:P.tpOn, tbOn:P.tbOn, tpVol:P.tpVol, tbVol:P.tbVol });
+let RJ = null, CAT = null; // fetched @raga-json file and @dunya catalogue
+const laya = bpm => bpm <= 60 ? "Vilambit" : bpm <= 160 ? "Madhya" : "Drut";
+
+async function loadJSON(path) { try { const r = await fetch(path, { cache:"no-cache" }); return r.ok ? await r.json() : null; } catch { return null; } }
+
+// RagaJSON field names vary, so look for each field by any common spelling
+function pick(obj, re) {
+  if (!obj || typeof obj !== "object") return null;
+  for (const [k, v] of Object.entries(obj)) {
+    if (re.test(k) && (typeof v === "string" || typeof v === "number" || Array.isArray(v))) return Array.isArray(v) ? v.join(" ") : String(v);
+  }
+  for (const v of Object.values(obj)) { if (v && typeof v === "object" && !Array.isArray(v)) { const f = pick(v, re); if (f) return f; } }
+  return null;
+}
+function raagFields() {
+  const ref = RAAG[P.raag], d = RJ && RJ.data, from = v => v ? "@raga-json" : "built-in";
+  const f = { aaroh:pick(d, /^(aaroh|aroh|arohana|aaroha|ascent)/i), avaroh:pick(d, /^(avaroh|avroh|avarohana|avaroha|descent)/i), pakad:pick(d, /^(pakad|pakar|catch)/i),
+              vadi:pick(d, /^vadi/i), samvadi:pick(d, /^samvadi/i), thaat:pick(d, /^(thaat|that|parent)/i), time:pick(d, /^(time|prahar|samay)/i) };
+  return { f, ref, src:{ aaroh:from(f.aaroh), avaroh:from(f.avaroh), pakad:from(f.pakad), vadi:from(f.vadi), samvadi:from(f.samvadi) } };
+}
+// show fetched notation as swaras when it uses this page's notation, otherwise as written
+const notation = s => /^[\s.,'SrRgGmMPdDnN]+$/.test(s) ? seqHTML(s) : `<span class="seq">${esc(s)}</span>`;
+const swName = v => SW[v] ? SW[v][0] : v;
+
+function renderHero() {
+  const r = RAAG[P.raag], { f } = raagFields();
+  $("#hero").innerHTML = `<span class="deva">${r.deva}</span><h1>${esc(r.name)}</h1>
+    <div class="meta">${esc(f.thaat || r.thaat)} thaat · ${esc(f.time || r.time)}</div>`;
+}
+function renderRaag() {
+  const { f, ref, src } = raagFields(), loaded = !!RJ;
+  const line = (k, l) => `<div style="grid-template-columns:72px minmax(0,1fr) auto"><dt>${l}</dt><dd>${f[k] ? notation(f[k]) : seqHTML(ref[k])}</dd><span class="chip ${src[k] === "@raga-json" ? "code" : ""}">${src[k]}</span></div>`;
+  $("#raagCard").innerHTML = `<div class="card-h"><h3>Raag details</h3><span class="srcrow"><span class="chip code">@raga-json</span>${loaded ? stBadgeP("ok", "Loaded from OpenRaga") : stBadgeP("check", "Not fetched yet · showing built-in reference")}</span></div>
+    <dl class="kv">${line("aaroh", "Aaroh")}${line("avaroh", "Avaroh")}${line("pakad", "Pakad")}</dl>
+    <div class="tags"><span class="tag">Vadi <b>${esc(swName(f.vadi || ref.vadi))}</b></span><span class="tag">Samvadi <b>${esc(swName(f.samvadi || ref.samvadi))}</b></span>
+      <span class="tag">Jati <b>${esc(ref.jati)}</b></span><span class="tag">Mood <b>${esc(ref.mood)}</b></span><span class="tag">Tanpura <b>${tpName(ref.tanpura)}–Sa</b></span></div>
+    <p class="small">${esc(ref.note)}</p>${legend}`;
+}
+const stBadgeP = (s, t) => `<span class="st ${s}">${esc(t)}</span>`;
+
+function renderTanpura() {
+  const d = droneFor(P.key);
+  $("#tanpuraCard").innerHTML = `<div class="card-h"><h3>Tanpura</h3><label class="small"><input type="checkbox" id="tpOn" ${P.tpOn ? "checked" : ""}> On</label></div>
+    <div class="big">Sa ${P.key} <small>${saFreq(P.key).toFixed(1)} Hz · ${tpName(RAAG[P.raag].tanpura)}–Sa–Sa–Sa</small></div>
+    <div class="meter" id="meter" aria-hidden="true">${"<i></i>".repeat(28)}</div>
+    ${d ? `<div class="who">${esc(d.s.name)} · ${esc(d.s.author)} · ${d.s.license} · <span class="mono">@freesound</span>${d.shift ? ` · pitched ${d.shift > 0 ? "+" : ""}${d.shift} from ${d.s.key}` : ""}</div>`
+        : `<div class="miss">No tanpura recording loaded. Run fetch_sounds.py to add the real Sa ${P.key} drone.</div>`}
+    <div class="field"><label for="tpv">Volume</label><div class="rng"><input type="range" id="tpv" min="0" max="1" step="0.05" value="${P.tpVol}"><output>${Math.round(P.tpVol * 100)}%</output></div></div>`;
+  $("#tpOn").onchange = e => { P.tpOn = e.target.checked; saveP(); restart(); };
+  slider("#tpv", "tpVol", "droneVol");
+}
+function chakra(T) {
+  const n = T.matras, cx = 120, cy = 120, R = 76, LR = 101, MR = 54;
+  let s = `<svg class="chakra" viewBox="-14 0 268 240" role="img" aria-label="${T.name}, ${n} matras"><circle class="ring" cx="${cx}" cy="${cy}" r="${R}"/>`;
+  T.beats.forEach((b, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n, mk = T.markAt[i], Pt = r => [cx + r * Math.cos(a), cy + r * Math.sin(a)].map(v => v.toFixed(1));
+    const [x, y] = Pt(R), [lx, ly] = Pt(LR), [mx, my] = Pt(MR);
+    s += `<circle class="dot ${i === 0 ? "sam" : ""} ${mk === "0" ? "khali" : ""}" data-b="${i}" cx="${x}" cy="${y}" r="7"/><text class="bl" data-bl="${i}" x="${lx}" y="${+ly + 3.5}" text-anchor="middle">${b.label}</text>`;
+    if (mk) s += `<text class="mk" x="${mx}" y="${+my + 4}" text-anchor="middle">${mk}</text>`; });
+  return s + `<text x="${cx}" y="${cy - 2}" text-anchor="middle" style="font-size:15px;font-weight:600">${T.name}</text><text class="bl" x="${cx}" y="${cy + 15}" text-anchor="middle" id="matraNow">${n} matras</text></svg>`;
+}
+function renderTabla() {
+  const T = TAALS[P.taal], ok = thekaPlayable(T), missing = BOL_LIST.map(b => b[0]).filter(b => !resolveBol(b).length);
+  const kit = [...new Set(T.beats.flatMap(b => b.bols.flatMap(x => resolveBol(x).map(s => s.author))))];
+  $("#tablaCard").innerHTML = `<div class="card-h"><h3>Tabla</h3><label class="small"><input type="checkbox" id="tbOn" ${P.tbOn ? "checked" : ""}> On</label></div>
+    <div class="big">${T.name} <small>${T.matras} matras · ${T.vibhag.join("+")} · ${laya(P.bpm)}</small></div>
+    ${chakra(T)}
+    <div class="tempo"><button class="bpmtoggle" id="bpmDown" aria-label="Slower">−5</button>
+      <div class="rng"><input type="range" id="bpm" min="30" max="320" step="1" value="${P.bpm}" aria-label="Tempo"><output>${P.bpm} bpm</output></div>
+      <button class="bpmtoggle" id="bpmUp" aria-label="Faster">+5</button></div>
+    ${ok ? `<div class="who">Sequenced from recorded bols · ${esc(kit.join(", "))} · <span class="mono">@freesound</span></div>`
+         : `<div class="miss">Bols not loaded: ${missing.join(", ")}. Run fetch_sounds.py to add the recorded strokes.</div>`}
+    <div class="field"><label for="tbv">Volume</label><div class="rng"><input type="range" id="tbv" min="0" max="1" step="0.05" value="${P.tbVol}"><output>${Math.round(P.tbVol * 100)}%</output></div></div>`;
+  $("#tbOn").onchange = e => { P.tbOn = e.target.checked; saveP(); restart(); };
+  const setBpm = v => { P.bpm = Math.max(30, Math.min(320, v)); saveP(); $("#bpm").value = P.bpm; $("#bpm").nextElementSibling.textContent = `${P.bpm} bpm`; Engine.update({ bpm:P.bpm }); renderNow(); };
+  $("#bpm").oninput = e => setBpm(+e.target.value);
+  $("#bpmDown").onclick = () => setBpm(P.bpm - 5); $("#bpmUp").onclick = () => setBpm(P.bpm + 5);
+  slider("#tbv", "tbVol", "tablaVol");
+}
+function slider(id, key, engineKey) { const el = $(id); el.oninput = () => { P[key] = +el.value; el.nextElementSibling.textContent = Math.round(P[key] * 100) + "%"; saveP(); Engine.update({ [engineKey]:P[key] }); }; }
+
+function cfg() {
+  const d = droneFor(P.key), T = TAALS[P.taal];
+  return { drone:P.tpOn && d ? { file:d.s.file, rate:d.rate } : null, seq:P.tbOn && thekaPlayable(T) ? { taal:T.id, bpm:P.bpm } : null, droneVol:P.tpVol, tablaVol:P.tbVol };
+}
+const playable = () => { const c = cfg(); return !!(c.drone || c.seq); };
+function renderNow() {
+  const b = $("#play"), on = Engine.playing; b.innerHTML = on ? STOP : PLAY; b.setAttribute("aria-label", on ? "Stop" : "Play"); b.disabled = !playable();
+  $("#nowLine").textContent = playable() ? `${RAAG[P.raag].name} · Sa ${P.key} · ${TAALS[P.taal].name} ${P.bpm} bpm` : "No recordings loaded yet";
+  $("#nowSub").textContent = playable() ? (on ? "Playing real recordings" : "Press play to start the tanpura and tabla") : "Run fetch_sounds.py, then republish with sounds.json and audio/.";
+}
+function restart() { if (Engine.playing) { if (playable()) Engine.start(cfg(), { id:"practice", title:"", sub:"" }); else Engine.stop(); } renderNow(); }
+$("#play").onclick = () => { if (Engine.playing) Engine.stop(); else Engine.start(cfg(), { id:"practice", title:"", sub:"" }); };
+Engine.on("state", () => { renderNow(); if (!Engine.playing) { document.querySelectorAll(".chakra .on").forEach(e => e.classList.remove("on")); const m = $("#matraNow"); if (m) m.textContent = `${TAALS[P.taal].matras} matras`; } });
+Engine.on("beat", (i, taal) => {
+  document.querySelectorAll(".chakra .on").forEach(e => e.classList.remove("on"));
+  document.querySelector(`.chakra [data-b="${i}"]`)?.classList.add("on"); document.querySelector(`.chakra [data-bl="${i}"]`)?.classList.add("on");
+  const m = $("#matraNow"); if (m) m.textContent = `matra ${i + 1} · ${TAALS[taal].beats[i].label}`;
+});
+(function meterLoop() { const m = document.getElementById("meter"), a = Engine.level();
+  if (m) m.querySelectorAll("i").forEach((el, i) => { const v = a ? a[2 + i * 3] / 255 : 0; el.style.height = (3 + v * 42).toFixed(1) + "px"; });
+  requestAnimationFrame(meterLoop); })();
+
+function renderCatalogue() {
+  if (!CAT) { $("#catalogue").innerHTML = `<p class="miss">Dunya catalogue not fetched yet. Run <span class="mono">DUNYA_TOKEN=… python3 sound-apis/fetch_raag.py yaman</span> to list all of Dunya's Hindustani raags here.</p>`; return; }
+  const want = n => (n || "").toLowerCase().replace(/[^a-z]/g, "");
+  const raags = [...CAT.raags].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  $("#catalogue").innerHTML = `<p class="who" style="margin-bottom:8px">${raags.length} Hindustani raags from CompMusic Dunya.</p><div class="cat">${raags.map(r =>
+    `<button aria-current="${[want(r.name), want(r.common_name)].includes("yaman")}"><span>${esc(r.name)}</span><span class="mono" style="font-size:11px;color:var(--muted)">${esc((r.uuid || "").slice(0, 8))}</span></button>`).join("")}</div>`;
+}
+function renderCredits() {
+  const rows = [];
+  const d = droneFor(P.key);
+  if (d) rows.push(["Tanpura Sa " + P.key, d.s]);
+  const T = TAALS[P.taal], used = new Map();
+  T.beats.forEach(b => b.bols.forEach(x => resolveBol(x).forEach(s => used.set(s.file, s))));
+  [...used.values()].forEach(s => rows.push(["Tabla bol " + s.bol, s]));
+  let html = rows.map(([u, s]) => `<tr><td>${esc(u)}</td><td><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a></td><td>${esc(s.author)}</td><td>${esc(s.license)}${s.license === "CC BY" ? " · credit required" : ""}</td></tr>`).join("");
+  html += `<tr><td>Raag details</td><td><a href="https://github.com/OpenRaga/ragamala-data" target="_blank" rel="noopener">OpenRaga ragamala-data</a>${RJ ? "" : " (not fetched yet)"}</td><td>OpenRaga contributors</td><td>CC BY 4.0 · credit required</td></tr>`;
+  html += `<tr><td>Raag catalogue</td><td><a href="https://dunya.compmusic.upf.edu" target="_blank" rel="noopener">CompMusic Dunya</a>${CAT ? "" : " (not fetched yet)"}</td><td>CompMusic, Universitat Pompeu Fabra</td><td>Metadata, per Dunya's terms</td></tr>`;
+  if (!rows.length) html = `<tr><td colspan="4" class="muted">Recording credits appear here once sounds.json is filled.</td></tr>` + html;
+  $("#credits").innerHTML = html;
+}
+function renderState() {
+  const n = count("tanpura") + count("bol"), el = $("#libState");
+  el.className = "st " + (n ? "ok" : "check"); el.textContent = n ? `${count("tanpura")} tanpura · ${count("bol")} bols loaded` : "Recordings not loaded";
+}
+function renderAll() { renderState(); renderHero(); renderRaag(); renderTanpura(); renderTabla(); renderCatalogue(); renderCredits(); renderNow(); }
+renderAll();
+Promise.all([loadManifest(), loadJSON(`raag/${P.raag}.json`).then(j => RJ = j), loadJSON("raag/catalogue.json").then(j => CAT = j)]).then(renderAll);
+</script>

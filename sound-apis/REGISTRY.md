@@ -14,6 +14,8 @@ knows the endpoint, key and licence rules.
 
 The fetched library lives in `sound-apis/sounds.json` + `sound-apis/audio/`.
 Refresh it with `python3 sound-apis/fetch_sounds.py` (see below).
+Raag data is fetched with `python3 sound-apis/fetch_raag.py <raag>` into `sound-apis/raag/`
+(`<raag>.json` from `@raga-json`; `catalogue.json` from `@dunya` when `DUNYA_TOKEN` is set).
 
 ---
 
@@ -45,4 +47,5 @@ Refresh it with `python3 sound-apis/fetch_sounds.py` (see below).
 4. **Tabla:** picks the uploader or pack that covers the most bols, so every stroke comes from one drum.
 5. Trims, levels loudness and encodes 192 kbps MP3 with ffmpeg, then writes credits for every file to `sounds.json`.
 
-Network hosts needed: `freesound.org`, `cdn.freesound.org`, `commons.wikimedia.org`, `upload.wikimedia.org`.
+Network hosts needed: `freesound.org`, `cdn.freesound.org`, `commons.wikimedia.org`, `upload.wikimedia.org`;
+for raag data also `api.github.com`, `raw.githubusercontent.com` and `dunya.compmusic.upf.edu`.
