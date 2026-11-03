@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raag Sound Library</title>
+<style>
+  :root { --bg:#faf7f2; --card:#fff; --ink:#2a2118; --muted:#7a6a58; --line:#e6ddd0; --accent:#b4531f; --chip:#f3ebe0; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg:#16120e; --card:#211b15; --ink:#f1e8dc; --muted:#a8977f; --line:#3a3027; --accent:#e58a4e; --chip:#2c241c; } }
+  :root[data-theme="dark"] { --bg:#16120e; --card:#211b15; --ink:#f1e8dc; --muted:#a8977f; --line:#3a3027; --accent:#e58a4e; --chip:#2c241c; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, sans-serif; }
+  main { max-width:960px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { margin:0 0 4px; font-size:24px; } .sub { color:var(--muted); margin:0 0 20px; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; border-bottom:1px solid var(--line); margin-bottom:16px; }
+  .tabs button { border:0; background:none; color:var(--muted); padding:8px 12px; font:inherit; cursor:pointer; border-bottom:2px solid transparent; }
+  .tabs button[aria-selected="true"] { color:var(--ink); border-color:var(--accent); font-weight:600; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  input, select, .btn { font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink); }
+  input[type=search] { flex:1 1 220px; min-width:0; }
+  .btn { cursor:pointer; background:var(--accent); color:#fff; border-color:var(--accent); }
+  .btn.ghost { background:var(--card); color:var(--ink); border-color:var(--line); }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .chips button { border:1px solid var(--line); background:var(--chip); color:var(--ink); border-radius:999px; padding:4px 10px; font:inherit; font-size:13px; cursor:pointer; }
+  .status { color:var(--muted); font-size:13px; margin:8px 0; min-height:1.5em; }
+  .list { display:grid; gap:10px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .card h3 { margin:0 0 2px; font-size:15px; word-break:break-word; }
+  .meta { color:var(--muted); font-size:13px; word-break:break-word; }
+  .lic { display:inline-block; font-size:12px; padding:1px 7px; border-radius:6px; background:var(--chip); margin-right:6px; }
+  .lic.ok { color:#2f7d32; } .lic.nc { color:#b3261e; }
+  audio { width:100%; margin-top:8px; height:36px; }
+  a { color:var(--accent); }
+  pre { background:var(--chip); padding:12px; border-radius:8px; overflow:auto; font-size:12px; }
+  .panel[hidden] { display:none; }
+  label.chk { display:flex; align-items:center; gap:6px; font-size:14px; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Raag Sound Library</h1>
+  <p class="sub">Browse tanpura, tabla and raag sources from <code>REGISTRY.md</code>. Open this file locally in a browser.</p>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="freesound" aria-selected="true">@freesound</button>
+    <button role="tab" data-tab="archive" aria-selected="false">@archive</button>
+    <button role="tab" data-tab="ragas" aria-selected="false">@raga-json</button>
+  </div>
+
+  <!-- FREESOUND -->
+  <section class="panel" id="p-freesound">
+    <div class="row">
+      <input id="fsKey" type="password" placeholder="Freesound API key (freesound.org/apiv2/apply)" style="flex:1 1 260px">
+      <button class="btn ghost" id="fsSaveKey">Save key</button>
+    </div>
+    <div class="row">
+      <input id="fsQ" type="search" placeholder="Search e.g. tanpura C#, tabla teentaal, tabla dha">
+      <select id="fsSort">
+        <option value="score">Best match</option><option value="rating_desc">Top rated</option>
+        <option value="downloads_desc">Most downloaded</option><option value="duration_desc">Longest</option>
+      </select>
+      <select id="fsLic">
+        <option value="">Any licence</option>
+        <option value='license:"Creative Commons 0"'>CC0 only</option>
+        <option value='(license:"Creative Commons 0" OR license:"Attribution")'>Commercial-safe</option>
+      </select>
+      <button class="btn" id="fsGo">Search</button>
+    </div>
+    <div class="chips" id="fsChips"></div>
+    <div class="status" id="fsStatus"></div>
+    <div class="list" id="fsList"></div>
+    <div class="row" style="margin-top:12px"><button class="btn ghost" id="fsMore" hidden>Load more</button></div>
+  </section>
+
+  <!-- ARCHIVE -->
+  <section class="panel" id="p-archive" hidden>
+    <div class="row">
+      <input id="iaQ" type="search" placeholder="Search e.g. raag yaman, tanpura, tabla solo">
+      <button class="btn" id="iaGo">Search</button>
+    </div>
+    <div class="chips" id="iaChips"></div>
+    <div class="status" id="iaStatus"></div>
+    <div class="list" id="iaList"></div>
+    <div class="row" style="margin-top:12px"><button class="btn ghost" id="iaMore" hidden>Load more</button></div>
+  </section>
+
+  <!-- RAGAS -->
+  <section class="panel" id="p-ragas" hidden>
+    <div class="row">
+      <input id="rgQ" type="search" placeholder="Filter raags…">
+      <button class="btn" id="rgLoad">Load raag list</button>
+    </div>
+    <div class="status" id="rgStatus">Source: github.com/OpenRaga/ragamala-data (CC BY 4.0)</div>
+    <div class="list" id="rgList"></div>
+    <pre id="rgView" hidden></pre>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+};
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// tabs
+document.querySelectorAll("[role=tab]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[role=tab]").forEach(x => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll(".panel").forEach(p => p.hidden = p.id !== "p-" + b.dataset.tab);
+  store.set("tab", b.dataset.tab);
+});
+const lastTab = store.get("tab"); if (lastTab) document.querySelector(`[data-tab="${lastTab}"]`)?.click();
+
+function chips(el, list, fn) {
+  el.innerHTML = list.map(q => `<button>${esc(q)}</button>`).join("");
+  el.querySelectorAll("button").forEach((b, i) => b.onclick = () => fn(list[i]));
+}
+
+// ---------- Freesound
+$("fsKey").value = store.get("fsKey") || "";
+$("fsSaveKey").onclick = () => { store.set("fsKey", $("fsKey").value.trim()); $("fsStatus").textContent = "Key saved in this browser."; };
+let fsNext = null;
+function licTag(url) {
+  const u = (url || "").toLowerCase();
+  if (u.includes("zero")) return `<span class="lic ok">CC0</span>`;
+  if (u.includes("by-nc") || u.includes("nc")) return `<span class="lic nc">CC-BY-NC</span>`;
+  if (u.includes("/by/")) return `<span class="lic ok">CC-BY</span>`;
+  return `<span class="lic">${esc(url)}</span>`;
+}
+async function fsFetch(url, append) {
+  $("fsStatus").textContent = "Loading…";
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    const d = await r.json();
+    const html = d.results.map(s => `
+      <div class="card">
+        <h3><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a></h3>
+        <div class="meta">${licTag(s.license)} #${s.id} · ${Math.round(s.duration)}s · by ${esc(s.username)}</div>
+        <div class="meta">${esc((s.tags || []).slice(0, 10).join(", "))}</div>
+        <audio controls preload="none" src="${esc(s.previews["preview-hq-mp3"])}"></audio>
+      </div>`).join("");
+    $("fsList").innerHTML = append ? $("fsList").innerHTML + html : html;
+    $("fsStatus").textContent = `${d.count.toLocaleString()} sounds · showing ${$("fsList").children.length}`;
+    fsNext = d.next ? d.next + (d.next.includes("token=") ? "" : "&token=" + encodeURIComponent(fsKey())) : null;
+    $("fsMore").hidden = !fsNext;
+  } catch (e) { $("fsStatus").textContent = "Error: " + e.message; }
+}
+const fsKey = () => $("fsKey").value.trim();
+function fsSearch(q) {
+  if (q) $("fsQ").value = q;
+  if (!fsKey()) { $("fsStatus").textContent = "Enter your Freesound API key first."; return; }
+  const p = new URLSearchParams({ query: $("fsQ").value, sort: $("fsSort").value, page_size: 30,
+    fields: "id,name,username,license,duration,tags,previews,url", token: fsKey() });
+  if ($("fsLic").value) p.set("filter", $("fsLic").value);
+  fsFetch("https://freesound.org/apiv2/search/text/?" + p, false);
+}
+$("fsGo").onclick = () => fsSearch();
+$("fsQ").onkeydown = e => e.key === "Enter" && fsSearch();
+$("fsMore").onclick = () => fsNext && fsFetch(fsNext, true);
+chips($("fsChips"), ["tanpura", "tanpura C#", "tanpura D", "tambura drone", "tabla teentaal",
+  "tabla keherwa", "tabla dadra", "tabla dha", "tabla tin", "tabla na", "sitar raga", "harmonium indian"], fsSearch);
+
+// ---------- Internet Archive
+let iaPage = 1;
+async function iaSearch(q, append) {
+  if (q) $("iaQ").value = q;
+  if (!append) { iaPage = 1; $("iaList").innerHTML = ""; }
+  $("iaStatus").textContent = "Loading…";
+  const p = new URLSearchParams({ q: `(${$("iaQ").value}) AND mediatype:audio`, rows: 30, page: iaPage, output: "json" });
+  ["identifier", "title", "creator", "licenseurl"].forEach(f => p.append("fl[]", f));
+  try {
+    const d = (await (await fetch("https://archive.org/advancedsearch.php?" + p)).json()).response;
+    d.docs.forEach(doc => {
+      const c = document.createElement("div"); c.className = "card";
+      c.innerHTML = `<h3><a href="https://archive.org/details/${esc(doc.identifier)}" target="_blank" rel="noopener">${esc(doc.title)}</a></h3>
+        <div class="meta">${esc([].concat(doc.creator || []).join(", "))} · <span class="lic">${esc(doc.licenseurl || "licence unknown")}</span></div>
+        <button class="btn ghost" style="margin-top:8px">Show tracks</button><div class="tracks"></div>`;
+      c.querySelector("button").onclick = async ev => {
+        ev.target.remove();
+        const m = await (await fetch("https://archive.org/metadata/" + encodeURIComponent(doc.identifier))).json();
+        const files = (m.files || []).filter(f => /\.(mp3|ogg)$/i.test(f.name)).slice(0, 40);
+        c.querySelector(".tracks").innerHTML = files.length ? files.map(f => `<div class="meta" style="margin-top:6px">${esc(f.title || f.name)}</div>
+          <audio controls preload="none" src="https://archive.org/download/${encodeURIComponent(doc.identifier)}/${f.name.split("/").map(encodeURIComponent).join("/")}"></audio>`).join("")
+          : `<div class="meta">No streamable MP3/OGG files.</div>`;
+      };
+      $("iaList").appendChild(c);
+    });
+    $("iaStatus").textContent = `${d.numFound.toLocaleString()} items · showing ${$("iaList").children.length}`;
+    $("iaMore").hidden = $("iaList").children.length >= d.numFound;
+  } catch (e) { $("iaStatus").textContent = "Error: " + e.message; }
+}
+$("iaGo").onclick = () => iaSearch();
+$("iaQ").onkeydown = e => e.key === "Enter" && iaSearch();
+$("iaMore").onclick = () => { iaPage++; iaSearch(null, true); };
+chips($("iaChips"), ["tanpura", "tabla solo", "raag yaman", "raag bhairav", "raag darbari", "hindustani classical", "all india radio classical"], iaSearch);
+
+// ---------- OpenRaga
+let ragas = [];
+function rgRender() {
+  const f = $("rgQ").value.toLowerCase();
+  const list = ragas.filter(r => r.name.toLowerCase().includes(f));
+  $("rgList").innerHTML = list.map((r, i) => `<div class="card" style="cursor:pointer" data-i="${ragas.indexOf(r)}"><h3>${esc(r.name.replace(/\.json$/, ""))}</h3></div>`).join("");
+  $("rgList").querySelectorAll(".card").forEach(c => c.onclick = async () => {
+    const r = ragas[c.dataset.i];
+    $("rgView").hidden = false; $("rgView").textContent = "Loading…";
+    try { $("rgView").textContent = JSON.stringify(await (await fetch(r.download_url)).json(), null, 2); }
+    catch (e) { $("rgView").textContent = "Error: " + e.message; }
+    $("rgView").scrollIntoView({ behavior: "smooth" });
+  });
+  $("rgStatus").textContent = `${list.length} of ${ragas.length} raags · OpenRaga ragamala-data (CC BY 4.0)`;
+}
+$("rgLoad").onclick = async () => {
+  $("rgStatus").textContent = "Loading…";
+  try {
+    const r = await fetch("https://api.github.com/repos/OpenRaga/ragamala-data/contents/data");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    ragas = (await r.json()).filter(f => f.type === "file" && f.name.endsWith(".json"));
+    rgRender();
+  } catch (e) { $("rgStatus").textContent = "Error: " + e.message; }
+};
+$("rgQ").oninput = rgRender;
+</script>
+</body>
+</html>
