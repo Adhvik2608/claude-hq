@@ -8,8 +8,6 @@ Standard library only. Examples:
   python3 browse.py freesound --pack 12345
   python3 browse.py dunya raag            # list all Hindustani raags
   python3 browse.py dunya taal --carnatic
-  python3 browse.py archive "raag yaman"
-  python3 browse.py archive --item <identifier>   # list files in an item
   python3 browse.py ragas                 # list OpenRaga raag JSON files
   python3 browse.py ragas yaman           # print one raag's JSON
 
@@ -27,14 +25,10 @@ import urllib.request
 UA = "claude-hq-sound-browser/1.0"
 
 SOURCES = [
-    ("@freesound", "Freesound API v2", "tanpura, tabla loops & bols", "FREESOUND_API_KEY"),
-    ("@dunya", "CompMusic Dunya", "raag/taal catalogue, recordings", "DUNYA_TOKEN"),
-    ("@saraga", "Saraga (mirdata)", "annotated concert audio", "none (pip install mirdata)"),
-    ("@tabla-strokes", "Four-Way Tabla (mirdata)", "isolated tabla strokes", "none (pip install mirdata)"),
+    ("@freesound", "Freesound API v2", "tanpura drones, tabla bols & loops", "FREESOUND_API_KEY"),
+    ("@commons", "Wikimedia Commons", "backup tanpura recordings", "none"),
+    ("@dunya", "CompMusic Dunya", "raag/taal catalogue", "DUNYA_TOKEN"),
     ("@raga-json", "OpenRaga ragamala-data", "raag theory JSON", "none"),
-    ("@raagadb", "RaagaDB (GitHub)", "raag theory", "none"),
-    ("@archive", "Internet Archive", "historic recordings", "none"),
-    ("@ragajunglism", "ragajunglism.org", "tanpura in 12 keys (manual)", "n/a"),
 ]
 
 
@@ -139,29 +133,6 @@ def cmd_dunya(a):
           f"Detail: browse.py dunya {a.resource} --id <uuid>")
 
 
-# ---------------------------------------------------------------- archive
-def cmd_archive(a):
-    if a.item:
-        data = get_json(f"https://archive.org/metadata/{urllib.parse.quote(a.item)}")
-        md = data.get("metadata", {})
-        print(f"{md.get('title')} | {md.get('creator')} | licence: {md.get('licenseurl', 'unknown')}\n")
-        for f in data.get("files", []):
-            if f.get("format", "").lower().find("mp3") >= 0 or f["name"].lower().endswith((".mp3", ".flac", ".ogg", ".wav")):
-                print(f"https://archive.org/download/{a.item}/{urllib.parse.quote(f['name'])}")
-        return
-    if not a.query:
-        sys.exit("Give a search query or --item <identifier>")
-    q = f"({a.query}) AND mediatype:audio"
-    params = [("q", q), ("rows", a.rows), ("page", a.page), ("output", "json")]
-    params += [("fl[]", f) for f in ("identifier", "title", "creator", "licenseurl")]
-    data = get_json("https://archive.org/advancedsearch.php?" + urllib.parse.urlencode(params))
-    resp = data["response"]
-    print(f"{resp['numFound']} items found\n")
-    for d in resp["docs"]:
-        print(f"{d['identifier']}\n    {d.get('title')} | {d.get('creator', '')} | {d.get('licenseurl', 'licence unknown')}")
-    print("\nFiles in an item: browse.py archive --item <identifier>")
-
-
 # ---------------------------------------------------------------- openraga
 GH = "https://api.github.com/repos/OpenRaga/ragamala-data/contents/data"
 
@@ -220,13 +191,6 @@ def main():
     d.add_argument("--carnatic", action="store_true")
     d.add_argument("--json", action="store_true", help="print raw JSON")
     d.set_defaults(fn=cmd_dunya)
-
-    r = sub.add_parser("archive", help="search @archive")
-    r.add_argument("query", nargs="?")
-    r.add_argument("--item", help="list audio files in an item")
-    r.add_argument("--rows", type=int, default=30)
-    r.add_argument("--page", type=int, default=1)
-    r.set_defaults(fn=cmd_archive)
 
     g = sub.add_parser("ragas", help="browse @raga-json (OpenRaga)")
     g.add_argument("name", nargs="?")
