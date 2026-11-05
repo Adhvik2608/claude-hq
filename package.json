@@ -1,0 +1,10 @@
+{
+  "name": "dream-house",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A five-floor 3D dream house with a temple, playable music room, working lift, customizable character and a studio tanpura in any scale.",
+  "type": "module",
+  "scripts": {
+    "start": "node serve.mjs"
+  }
+}
