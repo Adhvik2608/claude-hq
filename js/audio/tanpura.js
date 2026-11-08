@@ -343,43 +343,40 @@ function makeLoop(ctx, b) {
   return out;
 }
 
-// Estimate the Sa of a tanpura recording from its pitch-class energy (Sa strings dominate; Pa reinforces).
+// Estimate the Sa of a tanpura recording. Three of the four strings are Sa (one
+// of them an octave lower), so the pitch whose harmonic series carries the most
+// energy is Sa. Summing harmonics keeps the Pa string from being mistaken for Sa.
 export function detectSa(b) {
   const sr = b.sampleRate;
   const ch = b.getChannelData(0);
-  const start = Math.floor(Math.min(b.length * 0.1, sr)), len = Math.min(b.length - start, Math.floor(sr * 4));
+  const start = Math.floor(Math.min(b.length * 0.1, sr)), len = Math.min(b.length - start, Math.floor(sr * 12));
   if (len < sr) return null;
   const dec = 4, n = Math.floor(len / dec), x = new Float32Array(n);
   let lp = 0;
   for (let i = 0; i < n; i++) { for (let j = 0; j < dec; j++) lp += (ch[start + i * dec + j] - lp) * 0.3; x[i] = lp; }
   const fs = sr / dec;
-  const energy = (f) => {
+  const mag = (f) => {
+    if (f >= fs * 0.45) return 0;
     const w = 2 * Math.PI * f / fs, c = 2 * Math.cos(w);
     let s1 = 0, s2 = 0;
     for (let i = 0; i < n; i++) { const s0 = x[i] + c * s1 - s2; s2 = s1; s1 = s0; }
-    return s1 * s1 + s2 * s2 - c * s1 * s2;
+    return Math.sqrt(Math.max(0, s1 * s1 + s2 * s2 - c * s1 * s2));
   };
-  const scores = [];
-  for (let m10 = 0; m10 < 120; m10++) { // pitch classes in 10-cent steps
-    const pc = m10 / 10;
-    let e = 0;
-    for (let oct = 2; oct <= 4; oct++) {
-      const midi = 12 * (oct + 1) + pc;
-      const f = 440 * Math.pow(2, (midi - 69) / 12);
-      e += energy(f) * (oct === 3 ? 1.2 : 1);
-    }
-    scores.push(e);
-  }
+  const hz = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
   let best = 0, bestScore = -1;
-  for (let i = 0; i < 120; i++) {
-    const s = scores[i] + 0.45 * scores[(i + 70) % 120];
-    if (s > bestScore) { bestScore = s; best = i; }
+  for (let m10 = 0; m10 < 120; m10++) { // pitch classes in 10-cent steps
+    let score = 0;
+    for (const oct of [1, 2]) {
+      const fb = hz(12 * (oct + 1) + m10 / 10);
+      for (let h = 1; h <= 6; h++) score += mag(fb * h) / Math.sqrt(h);
+    }
+    if (score > bestScore) { bestScore = score; best = m10; }
   }
   const pc = best / 10;
-  let key = Math.round(pc) % 12;
+  const key = Math.round(pc) % 12;
   const cents = Math.round((pc - Math.round(pc)) * 100);
-  // register from the strongest octave of Sa
-  const e2 = energy(440 * Math.pow(2, (36 + key - 69) / 12)), e3 = energy(440 * Math.pow(2, (48 + key - 69) / 12)), e4 = energy(440 * Math.pow(2, (60 + key - 69) / 12));
-  const register = e4 > e3 * 1.3 && e4 > e2 ? 'female' : 'male';
+  // a male-register tanpura has its kharaj string an octave below the male Sa
+  const maleSa = (key <= 7 ? 48 + key : 36 + key) + cents / 100;
+  const register = mag(hz(maleSa - 12)) > 0.25 * mag(hz(maleSa)) ? 'male' : 'female';
   return { key, cents, register };
 }

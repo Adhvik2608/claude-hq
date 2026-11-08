@@ -13,7 +13,7 @@ function renderString(o, sr) {
   const r = rng(seed);
   const nyq = Math.min(10500, sr * 0.45);
   const K = Math.min(140, Math.floor(nyq / f0));
-  const B = 4e-6;
+  const B = 0; // jawari locks the partials harmonically: any stretch makes the drone sound sharp
   const BLK = 32;
   const Fh = 3600 + 1800 * bright, Fl = 520 + 300 * bright, tauC = 1.25 + tau1 * 0.12;
   const sig2 = 2 * 0.52 * 0.52;

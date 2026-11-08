@@ -47,11 +47,31 @@ export class Player {
     const s = this.seat;
     if (!s) return;
     this.seat = null;
-    const ex = s.exit || [s.pos[0] + Math.sin(s.yaw) * 0.75, s.pos[2] + Math.cos(s.yaw) * 0.75];
     const y = s.floorY ?? this.pos.y;
-    const p = this.physics.probe(ex[0], ex[1], y + 0.6, STEP + 0.2);
-    this.pos.set(ex[0], p.ground > -1e8 ? p.ground : y, ex[1]);
+    const base = s.getPos ? s.getPos() : s.pos;
+    const preferred = s.exit || [base[0] + Math.sin(s.yaw) * 0.75, base[2] + Math.cos(s.yaw) * 0.75];
+    // try the preferred spot, then a ring of spots around the seat (front first, then sides, then behind)
+    const cands = [preferred];
+    for (const r of [0.75, 1.0, 1.3]) for (const a of [0, 0.6, -0.6, Math.PI / 2, -Math.PI / 2, 2.2, -2.2, Math.PI]) {
+      cands.push([base[0] + Math.sin(s.yaw + a) * r, base[2] + Math.cos(s.yaw + a) * r]);
+    }
+    let spot = null;
+    for (const [x, z] of cands) { const g = this.freeAt(x, z, y); if (g !== null) { spot = [x, g, z]; break; } }
+    if (!spot) { const p = this.physics.probe(preferred[0], preferred[1], y + 0.6, STEP + 0.2); spot = [preferred[0], p.ground > -1e8 ? p.ground : y, preferred[1]]; }
+    this.pos.set(spot[0], spot[1], spot[2]);
     this.grounded = true;
+    this.vel.set(0, 0, 0);
+  }
+
+  // ground height if a body can stand at (x, z) near height y without touching anything, else null
+  freeAt(x, z, y) {
+    const ph = this.physics;
+    const p = ph.probe(x, z, y + 0.6, STEP + 0.2);
+    if (p.ground < -1e8 || Math.abs(p.ground - y) > 1.0) return null;
+    const q = { x, y: p.ground, z };
+    ph.resolve(q, this.radius, this.height, { x, z });
+    if (Math.hypot(q.x - x, q.z - z) > 0.02) return null;
+    return ph.fits(x, z, p.ground, this.height, STEP) ? p.ground : null;
   }
 
   update(dt, input, camYaw, lift) {

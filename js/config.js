@@ -54,19 +54,19 @@ export const ROOMS = [
   { id: 'bathroom', floor: 2, name: 'Bathroom', rect: [-16, -12, -5.5, 0], spawn: [-7, -2.5, -Math.PI / 2] },
   { id: 'guest', floor: 2, name: 'Guest Bedroom', rect: [5.5, 0, 16, 12], spawn: [7, 2.5, Math.PI / 2] },
   { id: 'study', floor: 2, name: 'Study', rect: [5.5, -12, 16, 0], spawn: [7, -2.5, Math.PI / 2] },
-  { id: 'lounge', floor: 2, name: 'Family Lounge', rect: [-5.5, 5.5, 5.5, 12], spawn: [0, 7, 0] },
+  { id: 'lounge', floor: 2, name: 'Family Lounge', rect: [-5.5, 5.5, 5.5, 12], spawn: [0, 6.3, 0] },
   { id: 'gallery2', floor: 2, name: 'Atrium Gallery', rect: [-5.5, -12, 5.5, 5.5], spawn: [0, 4.6, Math.PI] },
   // Third
   { id: 'suite', floor: 3, name: 'Master Suite', rect: [-16, -3, -5.5, 12], spawn: [-7, 2.5, -Math.PI / 2] },
   { id: 'spa', floor: 3, name: 'Suite Spa Bath', rect: [-16, -12, -5.5, -3], spawn: [-12, -4.2, Math.PI] },
   { id: 'cinema', floor: 3, name: 'Home Cinema', rect: [5.5, -12, 16, 12], spawn: [7, 0, Math.PI / 2] },
   { id: 'tea', floor: 3, name: 'Chai Lounge', rect: [-5.5, 5.5, 5.5, 12], spawn: [0, 7, 0] },
-  { id: 'balcony3', floor: 3, name: 'Grand Balcony', rect: [-16, 12, 5.5, 15.5], spawn: [-3, 13.5, 0], outdoor: true },
+  { id: 'balcony3', floor: 3, name: 'Grand Balcony', rect: [-16, 12, 5.5, 15.5], spawn: [-10.0, 13.2, 0], outdoor: true },
   { id: 'gallery3', floor: 3, name: 'Atrium Gallery', rect: [-5.5, -12, 5.5, 5.5], spawn: [0, 4.6, Math.PI] },
   // Terrace
   { id: 'pavilion', floor: 4, name: 'Sky Pavilion', rect: [-4.6, -4.6, 4.6, 4.6], spawn: [0, 4.2, 0] },
-  { id: 'pool', floor: 4, name: 'Infinity Pool', rect: [6, -11, 15.5, 5], spawn: [6, 7, Math.PI / 2], outdoor: true },
-  { id: 'terraceGarden', floor: 4, name: 'Terrace Garden', rect: [-15.5, -11.5, -6, 11.5], spawn: [-6, 0, -Math.PI / 2], outdoor: true },
+  { id: 'pool', floor: 4, name: 'Infinity Pool', rect: [6, -11, 15.5, 5], spawn: [6.3, 0.5, Math.PI / 2], outdoor: true },
+  { id: 'terraceGarden', floor: 4, name: 'Terrace Garden', rect: [-15.5, -11.5, -6, 11.5], spawn: [-7.6, 1.5, -Math.PI / 2], outdoor: true },
   { id: 'terrace', floor: 4, name: 'Sky Terrace', rect: [-16, -12, 16, 12], spawn: [0, 7.5, 0], outdoor: true },
 ];
 

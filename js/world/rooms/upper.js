@@ -311,7 +311,7 @@ function bedroom(ctx, n) {
   F.table(ctx, { x: -8.6, z: 11.3, y, w: 1.4, d: 0.65, top: M.walnut });
   F.chair(ctx, { x: -8.6, z: 10.6, y, rot: Math.PI, seatMat: M.fabNavy, floor: n, label: 'Sit at the desk' });
   F.tableLamp(ctx, { x: -9.1, z: 11.4, y: y + 0.76, floor: n });
-  F.armchair(ctx, { x: -7.0, z: 3.0, y, rot: -Math.PI / 2 - 0.6, mat: M.fabMustard, floor: n });
+  F.armchair(ctx, { x: -6.7, z: 8.4, y, rot: -Math.PI / 2 - 0.5, mat: M.fabMustard, floor: n });
   F.plant(ctx, { x: -6.1, z: 11.3, y, size: 1.0, kind: 'monstera', seed: 141 });
   F.plant(ctx, { x: -15.3, z: 11.3, y, size: 1.1, kind: 'palm', seed: 142 });
   // dresser with mirror
@@ -429,7 +429,8 @@ function suite(ctx, n) {
   ctx.physics.addBoxC(-7.0, y, -2.6, 1.3, 0.75, 0.45);
   F.chair(ctx, { x: -7.0, z: -2.0, y, rot: Math.PI, seatMat: M.fabBlush, mat: M.goldPolish, floor: n, label: 'Sit at the dressing table' });
   // walk-in wardrobe wall
-  F.wardrobe(ctx, { x: -12.4, z: -2.6, y, rot: 0, w: 4.2, h: 2.8, d: 0.6, mat: M.woodLacquer, handle: M.goldPolish, doors: 5 });
+  // (stops short of the spa door at x = -12)
+  F.wardrobe(ctx, { x: -14.35, z: -2.6, y, rot: 0, w: 3.2, h: 2.8, d: 0.6, mat: M.woodLacquer, handle: M.goldPolish, doors: 4 });
   F.plant(ctx, { x: -6.0, z: 11.4, y, size: 1.2, kind: 'palm', seed: 191 });
   frameItem(ctx, { x: -5.62, z: 8.0, y: y + 1.9, rot: -Math.PI / 2, w: 0.85, h: 1.13, tex: deityTexture('krishna'), floor: n, id: 'suite-krishna', label: 'Shri Krishna' });
   // grand balcony
@@ -474,15 +475,18 @@ function cinema(ctx, n) {
   scr.position.set(15.68, y + 1.85, 0); scr.rotation.y = -Math.PI / 2; ctx.dyn.add(scr);
   ctx.anim((dt, t) => sc.draw(t));
   ctx.light({ pos: [13.5, y + 1.8, 0], floor: n, intensity: 10, distance: 9, color: 0x9fb0ff });
-  // tiered recliners
+  // tiered recliners either side of a centre aisle (0.2 m risers, so every row can be stepped onto)
   for (let row = 0; row < 3; row++) {
-    const x = 11.6 - row * 2.2, ry = y + row * 0.3;
-    if (row) { b.box(x, y, 0, 2.0, row * 0.3, 9.0, M.fabCharcoal); ctx.physics.addRect(x - 1.0, -4.5, x + 1.0, 4.5, ry, row * 0.3 + 0.01, 'fabric'); }
-    for (let i = 0; i < 4; i++) {
-      const z = -3.0 + i * 2.0;
-      F.sofa(ctx, { x, z, y: ry, rot: Math.PI / 2, len: 1.05, depth: 1.0, seats: 1, mat: M.fabRed, cushionMat: M.fabRed, floor: n, label: 'Watch the movie' });
+    const x = 11.6 - row * 2.2, ry = y + row * 0.2;
+    for (const sz of [-1, 1]) {
+      if (row) { b.box(x, y, sz * 2.8, 2.0, row * 0.2, 3.6, M.fabCharcoal); ctx.physics.addRect(x - 1.0, sz * 2.8 - 1.8, x + 1.0, sz * 2.8 + 1.8, ry, row * 0.2 + 0.01, 'fabric'); }
+      for (const dz of [0.7, 2.1]) {
+        F.sofa(ctx, { x, z: sz * dz + sz * 0.65, y: ry, rot: Math.PI / 2, len: 1.05, depth: 1.0, seats: 1, mat: M.fabRed, cushionMat: M.fabRed, floor: n, label: 'Watch the movie' });
+      }
     }
   }
+  // aisle lights
+  for (let i = 0; i < 6; i++) b.box(6.6 + i * 1.6, y + 0.01, 0, 0.12, 0.01, 0.12, M.ledStrip, { cast: false });
   // patch recliner seats into 'recline'
   for (const it of ctx.world.interactables) if (it.label === 'Watch the movie' && it.seat) { it.seat.mode = 'recline'; it.seat.cam = { pos: [5.8, y + 2.6, it.pos.z * 0.3], look: [15.6, y + 1.8, 0] }; }
   // star ceiling

@@ -274,7 +274,7 @@ function shadowBox(ctx, x, y, z, rot, deity, floor) {
   const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 1.06), M.glass); glass.position.z = 0.27; g.add(glass);
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   ctx.dyn.add(bakeGroup(g));
-  ctx.interact({ pos: new THREE.Vector3(x + Math.sin(rot) * 0.9, y, z + Math.cos(rot) * 0.9), r: 1.1, floor, label: DEITY_NAMES[deity] + ' · 3D relief' });
+  ctx.interact({ pos: new THREE.Vector3(x + Math.sin(rot) * 0.9, y, z + Math.cos(rot) * 0.9), r: 1.1, floor, label: `Bow to ${DEITY_NAMES[deity]} (3D relief)`, action: (g) => { g.player.emote = 'namaste'; g.ui.toast(`🙏 ${DEITY_NAMES[deity]}`); } });
 }
 let _fig, _arch;
 function figureMask() {
@@ -330,16 +330,17 @@ function foyer(ctx) {
   const fl = 0;
   F.rug(ctx, { x: 0, z: 8.6, y: 0, w: 2.4, d: 5.6, mat: M.rugLiving });
   F.chandelier(ctx, { x: 0, z: 8.6, yTop: CEIL, size: 1.25, floor: fl, drop: 1.0 });
-  // console with brass urli of floating flowers & candles
+  // consoles with brass urlis of floating flowers & candles, kept clear of the temple and dining arches
   for (const sx of [-1, 1]) {
-    const x = sx * 4.6;
-    F.table(ctx, { x, z: 8.6, y: 0, w: 0.5, d: 2.0, h: 0.85, top: M.marbleBlack, leg: M.gold, rot: 0 });
-    b.cyl(x, 0.85, 8.6, 0.3, 0.2, 0.12, M.brass, { seg: 32 });
-    b.cyl(x, 0.95, 8.6, 0.27, 0.27, 0.005, M.water, { seg: 32, cast: false });
-    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; b.sphere(x + Math.cos(a) * 0.17, 0.96, 8.6 + Math.sin(a) * 0.17, 0.035, i % 2 ? marigold : rose, { seg: 8 }); }
-    flame(ctx, x, 0.97, 8.6, 0.8);
-    F.plant(ctx, { x, z: 10.9, y: 0, size: 1.15, kind: 'palm', pot: M.ceramicBlack, seed: 3 + sx });
-    F.plant(ctx, { x, z: 6.3, y: 0, size: 0.9, kind: 'monstera', pot: M.ceramic, seed: 7 + sx });
+    const x = sx * 5.05, z = 6.35;
+    F.table(ctx, { x, z, y: 0, w: 0.45, d: 1.3, h: 0.85, top: M.marbleBlack, leg: M.gold, rot: 0 });
+    b.cyl(x, 0.85, z, 0.2, 0.14, 0.1, M.brass, { seg: 32 });
+    b.cyl(x, 0.93, z, 0.18, 0.18, 0.005, M.water, { seg: 32, cast: false });
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; b.sphere(x + Math.cos(a) * 0.12, 0.94, z + Math.sin(a) * 0.12, 0.03, i % 2 ? marigold : rose, { seg: 8 }); }
+    flame(ctx, x, 0.95, z, 0.8);
+  }
+  F.plant(ctx, { x: -4.85, z: 11.35, y: 0, size: 1.15, kind: 'palm', pot: M.ceramicBlack, seed: 2 });
+  for (const sx of [-1, 1]) {
     // benches
     b.geo(cushion(1.3, 0.12, 0.45, 0.2), M.fabEmerald, { pos: [sx * 4.75, 0.46, 3.0], rot: Math.PI / 2 });
     b.box(sx * 4.75, 0, 3.0, 0.45, 0.42, 1.3, M.walnut, { collide: true });
@@ -571,9 +572,10 @@ function store(ctx) {
     if (rot === 0) ctx.physics.addBoxC(x, 0, z, len, 2.0, 0.5); else ctx.physics.addBoxC(x, 0, z, 0.5, 2.0, len);
   }
   // rice sacks & steel trunks
-  for (let i = 0; i < 3; i++) b.geo(cushion(0.5, 0.7, 0.35, 0.15), M.fabSand, { pos: [-2.4 + i * 0.55, 0.36, -6.4], rot: 0.2 * i });
-  b.geo(roundedBox(0.9, 0.5, 0.55, 0.03), M.steel, { pos: [-4.4, 0.25, -6.3] });
-  ctx.physics.addBoxC(-3.0, 0, -6.3, 3.0, 0.8, 0.7);
+  // (kept against the back shelves so the doorway stays clear)
+  for (let i = 0; i < 3; i++) b.geo(cushion(0.5, 0.7, 0.35, 0.15), M.fabSand, { pos: [-2.4 + i * 0.55, 0.36, -10.85], rot: 0.2 * i });
+  b.geo(roundedBox(0.9, 0.5, 0.55, 0.03), M.steel, { pos: [-3.9, 0.25, -10.85] });
+  ctx.physics.addBoxC(-3.05, 0, -10.85, 2.9, 0.8, 0.7);
   b.cyl(-3.0, CEIL - 0.6, -8.8, 0.004, 0.004, 0.6, M.blackMetal, { seg: 4 });
   b.sphere(-3.0, CEIL - 0.68, -8.8, 0.06, M.lampWarm, { seg: 12 });
   ctx.light({ pos: [-3.0, CEIL - 0.8, -8.8], floor: fl, intensity: 6, distance: 6, color: 0xffd0a0 });
